@@ -1,0 +1,1941 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PGPA (31st Amendment) National Redistricting Auditor — Dual Firewall Edition</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- D3.js & TopoJSON for Geographic US Map Rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            serif: ['Playfair Display', 'Georgia', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #070b14;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+    }
+    .state-path {
+      transition: fill 0.2s ease, stroke 0.18s ease, filter 0.18s ease;
+      cursor: pointer;
+    }
+    .state-path:hover {
+      filter: brightness(1.24) drop-shadow(0 0 8px rgba(255, 255, 255, 0.35));
+      stroke: #ffffff !important;
+      stroke-width: 2.2px !important;
+    }
+    .state-selected {
+      stroke: #facc15 !important;
+      stroke-width: 3px !important;
+      filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.65));
+    }
+    .carto-tile {
+      transition: all 0.16s ease;
+      cursor: pointer;
+    }
+    .carto-tile:hover {
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.55);
+      z-index: 10;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
+
+  <!-- TOP CONSTITUTIONAL HEADER -->
+  <header class="border-b border-slate-800 bg-slate-950/90 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3.5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+      <div class="flex items-start sm:items-center gap-3.5">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 via-indigo-700 to-red-600 p-0.5 shadow-lg shadow-blue-900/30 shrink-0">
+          <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center font-serif font-bold text-lg tracking-tighter text-amber-400">
+            31st
+          </div>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2 py-0.5 text-[11px] font-mono uppercase tracking-wider font-semibold rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+              PGPA Section 4–3 Dual Firewall Edition
+            </span>
+            <span class="text-xs text-slate-400 font-mono">119th Congress vs. 2025–2026 Mid-Decade Redistricting</span>
+          </div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white mt-0.5">
+            PGPA (31st Amendment) National Redistricting Auditor — Dual Firewall Edition
+          </h1>
+        </div>
+      </div>
+
+      <!-- Dual Firewall Architectural Badges -->
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <div class="px-3 py-1.5 rounded-lg bg-indigo-950/70 border border-indigo-500/40 flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
+          <span class="text-slate-200 font-medium">Large (N ≥ 5 · 29 States):</span>
+          <span class="font-mono text-indigo-300 font-bold">Empirical Rule (±2.0σ Z-Score)</span>
+        </div>
+        <div class="px-3 py-1.5 rounded-lg bg-teal-950/70 border border-teal-500/40 flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
+          <span class="text-slate-200 font-medium">Small (N = 2–4 · 15 States):</span>
+          <span class="font-mono text-teal-300 font-bold">Discrete Seat &amp; 95th %ile EG/MM</span>
+        </div>
+        <div class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 font-mono text-slate-400">
+          N = 1 (6 States): Exempt
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6 flex-1">
+
+    <!-- NATIONAL SUMMARY KPI BAR -->
+    <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <!-- Card 1: 119th Congress Current Delegation -->
+      <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+          <span class="uppercase tracking-wider font-semibold">119th Congress (Pre-2026)</span>
+          <span class="font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded">PDF Page 1</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-1">
+          <div class="flex items-baseline gap-3">
+            <span class="text-2xl font-extrabold text-blue-400 font-mono">213 D</span>
+            <span class="text-slate-500 font-mono">vs</span>
+            <span class="text-2xl font-extrabold text-red-400 font-mono">219 R</span>
+          </div>
+          <div class="text-xs font-mono text-slate-400">
+            1 Ind · 2 Vac
+          </div>
+        </div>
+        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden flex mt-3">
+          <div class="bg-blue-500 h-full" style="width: 48.96%" title="213 Democrats"></div>
+          <div class="bg-amber-400 h-full" style="width: 0.23%" title="1 Independent (CA)"></div>
+          <div class="bg-slate-500 h-full" style="width: 0.46%" title="2 Vacant (FL, TX)"></div>
+          <div class="bg-red-500 h-full" style="width: 50.34%" title="219 Republicans"></div>
+        </div>
+        <div class="flex justify-between text-[11px] text-slate-400 mt-1.5 font-mono">
+          <span>435 Total Seats</span>
+          <span>Ind: CA (1) · Vac: FL (1), TX (1)</span>
+        </div>
+      </div>
+
+      <!-- Card 2: 2025-2026 Mid-Decade Redistricting -->
+      <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+          <span class="uppercase tracking-wider font-semibold">2025–26 Post-Redistricting</span>
+          <span class="font-mono text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">PDF Page 2</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-1">
+          <div class="flex items-baseline gap-3">
+            <span class="text-2xl font-extrabold text-blue-400 font-mono">209 D</span>
+            <span class="text-slate-500 font-mono">vs</span>
+            <span class="text-2xl font-extrabold text-red-400 font-mono">225 R</span>
+          </div>
+          <div class="text-xs font-mono text-slate-400">
+            1 Ind · 0 Vac
+          </div>
+        </div>
+        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden flex mt-3">
+          <div class="bg-blue-500 h-full" style="width: 48.28%" title="209 Democrats"></div>
+          <div class="bg-amber-400 h-full" style="width: 0.23%" title="1 Independent (CA)"></div>
+          <div class="bg-red-500 h-full" style="width: 51.49%" title="225 Republicans"></div>
+        </div>
+        <div class="flex justify-between text-[11px] text-slate-400 mt-1.5 font-mono">
+          <span>11 States Redrawn (+10D / +16R)</span>
+          <span>Net Shift: -4 D / +6 R</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Large Delegations (N >= 5) Empirical Rule Summary -->
+      <div class="bg-slate-900/90 border border-indigo-500/35 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between text-xs text-indigo-300 mb-1.5">
+          <span class="uppercase tracking-wider font-bold">Track A: Large States (N ≥ 5)</span>
+          <span class="font-mono bg-indigo-500/20 border border-indigo-500/40 px-2 py-0.5 rounded">±2.0σ Empirical Rule</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiLargeOutliers" class="text-2xl font-extrabold text-red-400 font-mono">14 Outliers</span>
+          <span class="text-xs font-mono text-slate-400">of 29 States (|Z| &gt; 2.0σ)</span>
+        </div>
+        <p class="text-[11px] text-slate-300 mt-2 leading-relaxed font-mono">
+          All 10 large mid-decade redraws fail $\pm 2\sigma$: <span class="text-blue-400">CA (-5.33σ), VA (-4.32σ)</span> &amp; <span class="text-red-400">FL (+4.29σ), NC (+3.94), TX (+3.90σ), TN (+3.44σ), OH (+2.86σ), MO, AL, LA</span>.
+        </p>
+      </div>
+
+      <!-- Card 4: Small Delegations (N = 2..4) Discrete 95th Percentile Summary -->
+      <div class="bg-slate-900/90 border border-teal-500/35 rounded-2xl p-4 shadow-lg">
+        <div class="flex items-center justify-between text-xs text-teal-300 mb-1.5">
+          <span class="uppercase tracking-wider font-bold">Track B: Small States (N = 2–4)</span>
+          <span class="font-mono bg-teal-500/20 border border-teal-500/40 px-2 py-0.5 rounded">95th %ile Discrete Model</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-1">
+          <span id="kpiSmallOutliers" class="text-2xl font-extrabold text-amber-400 font-mono">3 Outliers · 1 Remedied</span>
+          <span class="text-xs font-mono text-slate-400">of 15 States (&gt;95th %ile)</span>
+        </div>
+        <p class="text-[11px] text-slate-300 mt-2 leading-relaxed font-mono">
+          <span class="text-emerald-400 font-bold">UT Prop 4</span> remedies 99.6th → 52.0th %ile! <span class="text-amber-300">NV (98.4th), NM (97.8th), AR (96.4th)</span> breach &gt;95th %ile; <span class="text-emerald-300">IA (91.5th)</span> passes.
+        </p>
+      </div>
+    </section>
+
+    <!-- MAIN WORKSPACE: LEFT = US MAP & QUICK SELECTORS | RIGHT = DYNAMIC DUAL-FIREWALL INSPECTOR -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEFT COLUMN (7 COLS): INTERACTIVE US MAP -->
+      <div class="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col">
+        <!-- Map Top Controls -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-slate-800">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <span>United States Redistricting &amp; Section 4–3 Dual Firewall Map</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5" id="mapSubtitle">
+              Color-coded by 2025–2026 Mid-Decade Party Gains (Blue = Democratic Gain, Red = Republican Gain). Dashed teal borders indicate Small Delegations (N = 2–4) governed by the 95th Percentile Discrete Model.
+            </p>
+          </div>
+
+          <!-- View Switcher: Geographic vs Tile Cartogram -->
+          <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 self-start shrink-0">
+            <button id="btnViewGeo" onclick="setMapGeometry('geo')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow">
+              Geographic Map
+            </button>
+            <button id="btnViewCarto" onclick="setMapGeometry('carto')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400 hover:text-white">
+              50-State Grid
+            </button>
+          </div>
+        </div>
+
+        <!-- Map Color Mode Switcher -->
+        <div class="flex flex-wrap items-center gap-1.5 py-3 border-b border-slate-800/80">
+          <span class="text-xs font-semibold text-slate-400 mr-1">Color Mode:</span>
+          <button onclick="setMapMode('gains')" id="mode_gains" class="mode-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white border border-blue-400/40 shadow-sm">
+            1. 2025–26 Party Gains (Blue = D, Red = R)
+          </button>
+          <button onclick="setMapMode('verdict2026')" id="mode_verdict2026" class="mode-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 text-slate-300 hover:bg-slate-800 border border-slate-700">
+            2. Section 4–3 Audit Verdict (Post-2026)
+          </button>
+          <button onclick="setMapMode('regime')" id="mode_regime" class="mode-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 text-slate-300 hover:bg-slate-800 border border-slate-700">
+            3. Test Regime by Delegation Size (N≥5 vs N=2–4)
+          </button>
+          <button onclick="setMapMode('verdictPre')" id="mode_verdictPre" class="mode-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 text-slate-300 hover:bg-slate-800 border border-slate-700">
+            4. Pre-2026 Baseline Verdict
+          </button>
+        </div>
+
+        <!-- Quick-Select Bar 1: The 10 Mid-Decade Redrawn States (2025-2026) -->
+        <div class="py-2.5 border-b border-slate-800/60">
+          <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+            <span>2025–2026 Mid-Decade Redrawn States (11) — Click to Audit:</span>
+            <span class="text-amber-400">Blue = D Gain (+10D) · Red = R Gain (+16R)</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5" id="quickRedrawPills"></div>
+        </div>
+
+        <!-- Quick-Select Bar 2: Small Delegations (N = 2, 3, 4 — 15 States) -->
+        <div class="py-2.5 border-b border-slate-800/60">
+          <div class="text-[11px] font-mono uppercase tracking-wider text-teal-300 mb-1.5 flex items-center justify-between">
+            <span>Small Discrete Delegations (N = 2–4 · 15 States — ±2σ Inapplicable):</span>
+            <span class="text-amber-300">UT (Remedied) · NV, NM, AR (&gt;95th %ile Fail) · IA, KS, NE (Pass)</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5" id="quickSmallPills"></div>
+        </div>
+
+        <!-- MAP CANVAS CONTAINER -->
+        <div class="relative w-full min-h-[380px] sm:min-h-[450px] flex items-center justify-center my-2 bg-slate-950/70 rounded-xl border border-slate-800/70 overflow-hidden">
+          <!-- Geographic SVG Map -->
+          <div id="geoMapContainer" class="w-full h-full flex items-center justify-center p-2">
+            <svg id="usGeoSvg" viewBox="0 0 975 610" class="w-full h-auto max-h-[470px] select-none"></svg>
+          </div>
+
+          <!-- Cartogram Grid Map -->
+          <div id="cartoMapContainer" class="hidden w-full h-full p-3 sm:p-5 overflow-x-auto">
+            <div id="usCartoGrid" class="grid grid-cols-12 gap-1.5 min-w-[620px] max-w-[800px] mx-auto"></div>
+          </div>
+
+          <!-- Floating Hover Tooltip -->
+          <div id="mapTooltip" class="pointer-events-none fixed hidden z-50 bg-slate-950/95 border border-slate-700 rounded-xl p-3.5 shadow-2xl text-xs max-w-xs backdrop-blur-md"></div>
+        </div>
+
+        <!-- Dynamic Map Legend -->
+        <div id="mapLegend" class="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300"></div>
+      </div>
+
+      <!-- RIGHT COLUMN (5 COLS): DYNAMIC DUAL-FIREWALL STATE AUDIT INSPECTOR -->
+      <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+
+        <!-- Quick-Jump Header Bar inside Inspector -->
+        <div class="flex flex-wrap items-center justify-between gap-1.5 pb-3 border-b border-slate-800/80 text-[11px] font-mono">
+          <div class="flex flex-wrap items-center gap-1">
+            <span class="text-indigo-300 font-bold mr-1">Large (±2σ):</span>
+            <button onclick="selectState('TX')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-indigo-600 text-slate-200 transition">TX</button>
+            <button onclick="selectState('FL')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-indigo-600 text-slate-200 transition">FL</button>
+            <button onclick="selectState('CA')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-indigo-600 text-slate-200 transition">CA</button>
+            <button onclick="selectState('TN')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-indigo-600 text-slate-200 transition">TN</button>
+            <button onclick="selectState('VA')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-indigo-600 text-slate-200 transition">VA</button>
+            <button onclick="selectState('OH')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-indigo-600 text-slate-200 transition">OH</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-1">
+            <span class="text-teal-300 font-bold mr-1">Small (95th %ile):</span>
+            <button onclick="selectState('UT')" class="px-2 py-0.5 rounded bg-teal-950 border border-teal-500/40 hover:bg-teal-600 text-teal-200 transition">UT</button>
+            <button onclick="selectState('NV')" class="px-2 py-0.5 rounded bg-teal-950 border border-teal-500/40 hover:bg-teal-600 text-teal-200 transition">NV</button>
+            <button onclick="selectState('NM')" class="px-2 py-0.5 rounded bg-teal-950 border border-teal-500/40 hover:bg-teal-600 text-teal-200 transition">NM</button>
+            <button onclick="selectState('AR')" class="px-2 py-0.5 rounded bg-teal-950 border border-teal-500/40 hover:bg-teal-600 text-teal-200 transition">AR</button>
+            <button onclick="selectState('IA')" class="px-2 py-0.5 rounded bg-teal-950 border border-teal-500/40 hover:bg-teal-600 text-teal-200 transition">IA</button>
+            <button onclick="selectState('KS')" class="px-2 py-0.5 rounded bg-teal-950 border border-teal-500/40 hover:bg-teal-600 text-teal-200 transition">KS</button>
+          </div>
+        </div>
+
+        <!-- Selected State Title & Verdict Header -->
+        <div class="flex items-start justify-between gap-3 border-b border-slate-800 pb-3.5">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="auditStateCode" class="px-2 py-0.5 rounded bg-blue-600/20 border border-blue-500/40 text-blue-300 font-mono text-xs font-bold">UT</span>
+              <h2 id="auditStateName" class="text-xl font-bold text-white">Utah</h2>
+              <span id="auditSeatsBadge" class="text-xs font-mono text-slate-400">(N = 4 Districts)</span>
+            </div>
+            <p id="auditBillSub" class="text-xs text-blue-400 font-mono mt-1">
+              2025–26 Mid-Decade Redraw: +1 D Net Gain · Bill: Prop 4
+            </p>
+          </div>
+
+          <!-- Overall State PGPA Constitutionality Badge -->
+          <div id="auditVerdictBadge" class="px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider border text-right shrink-0">
+            PASS (REMEDIED)
+          </div>
+        </div>
+
+        <!-- CONSTITUTIONAL REGIME BANNER (Dynamically switches between Large N>=5, Small N=2..4, Single N=1) -->
+        <div id="trackRoutingBanner" class="rounded-xl p-3 border"></div>
+
+        <!-- Before vs After Delegation Comparison Cards -->
+        <div class="grid grid-cols-3 gap-2.5">
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400 font-medium">119th Current</div>
+            <div id="auditPreSplit" class="text-base sm:text-lg font-extrabold font-mono mt-1 text-white"></div>
+            <div id="auditPreNote" class="text-[11px] font-mono text-slate-400 mt-0.5"></div>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400 font-medium">2025–26 Redistricting</div>
+            <div id="auditPostSplit" class="text-base sm:text-lg font-extrabold font-mono mt-1 text-white"></div>
+            <div id="auditGainBadge" class="text-[11px] font-mono font-semibold mt-0.5"></div>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400 font-medium">2024 Vote Share</div>
+            <div id="auditVoteShare" class="text-sm sm:text-base font-bold font-mono mt-1 text-slate-200"></div>
+            <div id="auditPropMean" class="text-[11px] font-mono text-slate-400 mt-0.5"></div>
+          </div>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- TRACK A CONTAINER: LARGE DELEGATIONS (N >= 5) EMPIRICAL RULE (±2.0σ)  -->
+        <!-- ===================================================================== -->
+        <div id="trackAContainer" class="space-y-4">
+          <div class="bg-slate-950 border border-indigo-500/35 rounded-xl p-3.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <span class="text-xs font-semibold text-indigo-200 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                Empirical Rule (±2.0σ) Hypothesis Test Bell Curve
+              </span>
+              <div class="flex items-center gap-1 text-[11px] font-mono">
+                <button onclick="setBellCurveModel('mcmc')" id="bellBtnMcmc" class="px-2 py-0.5 rounded bg-indigo-600 text-white font-semibold">Model 2: Spatial MCMC</button>
+                <button onclick="setBellCurveModel('binom')" id="bellBtnBinom" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white">Model 1: Binomial</button>
+              </div>
+            </div>
+
+            <!-- Dynamic SVG Bell Curve -->
+            <svg id="bellCurveSvg" viewBox="0 0 500 185" class="w-full h-auto select-none overflow-visible"></svg>
+
+            <div class="flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-400 mt-2 pt-2 border-t border-slate-900">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/50 border border-emerald-400 inline-block"></span>
+                Compliant (|Z| ≤ 2.0σ)
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                Pre-2026 Map
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-400 inline-block"></span>
+                2025–26 Redrawn Map
+              </span>
+            </div>
+          </div>
+
+          <!-- Track A Numerical Z-Score Readout -->
+          <div class="bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden text-xs divide-y divide-slate-800/70">
+            <div class="px-3.5 py-2 bg-slate-900/90 flex items-center justify-between">
+              <span class="font-bold uppercase tracking-wider text-indigo-300">Section 4–3 Empirical Rule Z-Scores (Cutoff: ±2.00σ)</span>
+              <span class="font-mono text-[11px] text-slate-400">Z = (X - μ) / σ</span>
+            </div>
+            <div class="p-3 flex items-center justify-between gap-2">
+              <div>
+                <div class="font-semibold text-slate-200">Model 1: Binomial Proportional (μ = N·p, σ = √Np(1-p))</div>
+                <div id="model1Params" class="text-[11px] font-mono text-slate-400 mt-0.5"></div>
+              </div>
+              <div class="flex items-center gap-2 font-mono shrink-0">
+                <div class="text-right">
+                  <div class="text-[10px] text-slate-400">Pre Z</div>
+                  <div id="model1ZPre" class="font-bold"></div>
+                </div>
+                <span class="text-slate-600">→</span>
+                <div class="text-right">
+                  <div class="text-[10px] text-slate-400">2026 Z</div>
+                  <div id="model1ZPost" class="font-bold"></div>
+                </div>
+              </div>
+            </div>
+            <div class="p-3 flex items-center justify-between gap-2">
+              <div>
+                <div class="font-semibold text-slate-200">Model 2: MCMC Spatial Ensemble (10,000 Neutral Maps)</div>
+                <div id="model2Params" class="text-[11px] font-mono text-slate-400 mt-0.5"></div>
+              </div>
+              <div class="flex items-center gap-2 font-mono shrink-0">
+                <div class="text-right">
+                  <div class="text-[10px] text-slate-400">Pre Z</div>
+                  <div id="model2ZPre" class="font-bold"></div>
+                </div>
+                <span class="text-slate-600">→</span>
+                <div class="text-right">
+                  <div class="text-[10px] text-slate-400">2026 Z</div>
+                  <div id="model2ZPost" class="font-bold"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Sigma Calibration Slider (Track A) -->
+          <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3">
+            <div class="flex items-center justify-between text-xs mb-1.5">
+              <span class="font-semibold text-slate-300">Calibrate Spatial Ensemble σ_MCMC Multiplier</span>
+              <span id="sigmaScaleLabel" class="font-mono text-indigo-400 font-bold">1.00x (Empirical Default)</span>
+            </div>
+            <input id="sigmaMultiplierSlider" type="range" min="0.70" max="1.50" step="0.05" value="1.00"
+              oninput="updateSigmaMultiplier(this.value)"
+              class="w-full accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg" />
+          </div>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- TRACK B CONTAINER: SMALL DELEGATIONS (N = 2–4) DISCRETE 95th %ILE     -->
+        <!-- ===================================================================== -->
+        <div id="trackBContainer" class="hidden space-y-4">
+          <!-- 1. Discrete Ensemble Seat Probability Distribution Histogram -->
+          <div class="bg-slate-950 border border-teal-500/40 rounded-xl p-3.5">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold text-teal-300 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+                Discrete Seat Count Ensemble Distribution (10,000 MCMC Maps)
+              </span>
+              <span id="discreteStepsLabel" class="text-[11px] font-mono text-slate-400">5 Discrete Outcomes (0R..4R)</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mb-2.5 leading-relaxed">
+              In <span id="discreteReasonN" class="text-slate-200 font-mono">N = 4</span> delegations, 1 seat shift = <span id="discreteStepPct" class="text-teal-300 font-mono font-semibold">25.0%</span> of the entire delegation, rendering continuous $\pm 2\sigma$ standard deviation tests ineffective. Section 4–3 evaluates discrete seat probabilities alongside the **95.0th Percentile Efficiency Gap &amp; Mean-Median Firewall**.
+            </p>
+
+            <!-- Dynamic Discrete Seat Histogram Bars -->
+            <div id="discreteSeatHistogram" class="grid gap-2 pt-1 pb-2"></div>
+
+            <div class="flex flex-wrap items-center justify-between text-[10px] font-mono text-slate-400 pt-2 border-t border-slate-900">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-400 inline-block"></span> Pre-2026 Enacted Split</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-fuchsia-400 inline-block"></span> 2025–26 Enacted Split</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-teal-500/60 inline-block"></span> Neutral Ensemble P(X)</span>
+            </div>
+          </div>
+
+          <!-- 2. Continuous Metrics & 95th Percentile Ensemble Firewall Gauge -->
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-3.5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-teal-300">
+                Section 4–3 Continuous Metrics &amp; 95.0th Percentile Firewall
+              </span>
+              <span class="text-[11px] font-mono text-red-400 font-semibold">Boundary: 95.0th %ile</span>
+            </div>
+
+            <!-- Efficiency Gap & Mean-Median Readout Cards -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2.5">
+                <div class="text-[10px] font-mono uppercase text-slate-400">Efficiency Gap (EG %)</div>
+                <div id="smallEgReadout" class="text-sm font-mono font-bold text-white mt-0.5"></div>
+                <div id="smallEgPreSub" class="text-[10px] font-mono text-slate-400 mt-0.5"></div>
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2.5">
+                <div class="text-[10px] font-mono uppercase text-slate-400">Mean-Median Diff (MM %)</div>
+                <div id="smallMmReadout" class="text-sm font-mono font-bold text-white mt-0.5"></div>
+                <div id="smallMmPreSub" class="text-[10px] font-mono text-slate-400 mt-0.5"></div>
+              </div>
+            </div>
+
+            <!-- Interactive 0th to 100th Percentile Gauge with 95th Percentile Firewall Line -->
+            <div class="space-y-1.5 pt-1">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-semibold text-white">Neutral Ensemble Percentile Rank (EG / MM)</span>
+                <span id="smallPctRankBadge" class="font-mono text-xs font-bold"></span>
+              </div>
+
+              <div class="relative w-full h-6 bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
+                <!-- Compliant 0-95% Zone -->
+                <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-950/60 via-teal-900/40 to-amber-900/40" style="width: 95%"></div>
+                <!-- Unconstitutional 95-100% Red Zone -->
+                <div class="absolute inset-y-0 right-0 bg-red-600/45" style="width: 5%"></div>
+
+                <!-- Pre-2026 Percentile Marker (Amber Pin) -->
+                <div id="smallPrePctMarker" class="absolute top-0 bottom-0 w-1.5 bg-amber-400 z-20 transition-all duration-300" title="Pre-2026 Ensemble Percentile"></div>
+
+                <!-- Post-2026 Fill Bar -->
+                <div id="smallPostPctBar" class="h-full transition-all duration-300 opacity-85"></div>
+
+                <!-- 95th Percentile Constitutional Firewall Line -->
+                <div class="absolute top-0 bottom-0 border-l-2 border-dashed border-red-400 z-30" style="left: 95%"></div>
+              </div>
+
+              <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                <span>0th %ile (Neutral)</span>
+                <span>50th %ile (Median)</span>
+                <span class="text-red-400 font-bold">95.0th %ile Firewall →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- TRACK C CONTAINER: AT-LARGE SINGLE DISTRICT (N = 1 EXEMPT)            -->
+        <!-- ===================================================================== -->
+        <div id="trackCContainer" class="hidden">
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-center space-y-2">
+            <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-800 text-slate-300 font-mono font-bold text-sm">
+              N=1
+            </div>
+            <h3 class="text-sm font-bold text-white">Constitutional Exempt — Single At-Large Congressional District</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Because the entire state elects a single Representative at-large, no internal district boundaries exist to pack or crack voters. Both the Empirical Rule ($\pm 2\sigma$) and the 95th Percentile Discrete Firewall are structurally inapplicable.
+            </p>
+          </div>
+        </div>
+
+        <!-- SHARED SECTION 7 & SECTION 3 MANDATORY REMEDY FOOTER -->
+        <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2 text-xs">
+          <div>
+            <div class="font-semibold text-slate-200">Section 7 Mid-Decade Frequency Clause</div>
+            <div id="sec7Desc" class="text-[11px] text-slate-400 mt-0.5"></div>
+          </div>
+          <span id="sec7Badge" class="px-2.5 py-1 rounded font-mono text-[11px] font-bold shrink-0"></span>
+        </div>
+
+        <div id="remedyCard" class="rounded-xl p-3.5 border bg-emerald-950/25 border-emerald-500/30">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-300">
+              Section 3 Judicial Analysis &amp; Mandatory Remedy
+            </span>
+            <span id="remedyTargetSplit" class="font-mono text-sm font-extrabold text-emerald-400"></span>
+          </div>
+          <p id="remedyExplanation" class="text-xs text-slate-300 mt-1.5 leading-relaxed"></p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- DEDICATED SHOWCASE: SMALL DELEGATIONS (N = 2, 3, 4 — 15 STATES) 95th PERCENTILE MATRIX -->
+    <section class="bg-slate-900/90 border border-teal-500/30 rounded-2xl p-4 sm:p-6 shadow-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-teal-500/15 text-teal-300 border border-teal-500/30">
+              Section 4–3 Small Delegations (N = 2, 3, 4 — 15 States)
+            </span>
+            <span class="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-800 text-amber-300">
+              Empirical Rule (±2σ) Inapplicable
+            </span>
+          </div>
+          <h2 class="text-lg sm:text-xl font-bold text-white mt-1">
+            Discrete Seat Counts &amp; 95th Percentile Efficiency Gap / Mean-Median Audit Matrix
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            In small delegations ($N \in \{2, 3, 4\}$), a single seat shift equals $25\%$ to $50\%$ of the state's representation. Under Section 4–3, unconstitutionality is determined by whether the plan's **Efficiency Gap ($\text{EG}$)** or **Mean-Median Difference ($\text{MM}$)** exceeds the **95.0th percentile** of the neutral ensemble distribution. Click any card to inspect its discrete probability distribution.
+          </p>
+        </div>
+      </div>
+
+      <!-- 15 Small Delegation Cards Grid -->
+      <div id="smallStatesMatrixGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mt-4"></div>
+    </section>
+
+    <!-- COMPLETE 50-STATE MASTER COMPARISON TABLE -->
+    <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+      <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">
+              Complete 50-State Master Comparison Ledger
+            </span>
+          </div>
+          <h2 class="text-lg sm:text-xl font-bold text-white mt-1">
+            119th Congress vs. 2025–2026 Redistricting — Dual Firewall Evaluation Table
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Large States ($N \ge 5$) display their **Model 1 Binomial &amp; Model 2 MCMC Z-Scores vs. $\pm 2.0\sigma$**, while Small States ($N = 2\text{–}4$) explicitly display **`±2σ N/A (Discrete)`** alongside their **Efficiency Gap, Mean-Median, and Ensemble Percentile vs. the 95.0th %ile firewall**.
+          </p>
+        </div>
+
+        <!-- Filter Tabs & Search -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="setTableFilter('all')" id="tab_all" class="tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow">
+            All 50 States
+          </button>
+          <button onclick="setTableFilter('changed')" id="tab_changed" class="tab-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-amber-300 hover:text-white border border-amber-500/30">
+            2025–26 Redrawn (11)
+          </button>
+          <button onclick="setTableFilter('large')" id="tab_large" class="tab-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-indigo-300 hover:text-white border border-indigo-500/30">
+            Large N≥5 (±2σ Test · 29)
+          </button>
+          <button onclick="setTableFilter('small')" id="tab_small" class="tab-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-teal-300 hover:text-white border border-teal-500/30">
+            Small N=2–4 (95th %ile Test · 15)
+          </button>
+          <button onclick="setTableFilter('unconstitutional')" id="tab_unconstitutional" class="tab-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-red-300 hover:text-white border border-red-500/30">
+            Unconstitutional Outliers
+          </button>
+          <input id="stateSearchInput" type="text" placeholder="Search state or bill..." oninput="renderAuditTable()"
+            class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 w-40" />
+        </div>
+      </div>
+
+      <!-- Responsive Audit Table -->
+      <div class="overflow-x-auto mt-4">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-[11px] font-mono uppercase tracking-wider text-slate-400 bg-slate-950/60">
+              <th class="py-3 px-3">State</th>
+              <th class="py-3 px-2 text-center">Seats ($N$)</th>
+              <th class="py-3 px-2.5">Section 4–3 Test Regime</th>
+              <th class="py-3 px-3">119th Current (D–R–I–Vac)</th>
+              <th class="py-3 px-3">2025–26 Redrawn (D–R–I)</th>
+              <th class="py-3 px-2.5 text-center">Net Gain</th>
+              <th class="py-3 px-2.5">Bill</th>
+              <th class="py-3 px-3 text-center">Primary Statistical Test (Pre → Post)</th>
+              <th class="py-3 px-3 text-center">Secondary Metric / %ile</th>
+              <th class="py-3 px-3">PGPA Constitutional Verdict</th>
+              <th class="py-3 px-3">Sec. 3 Remedy</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody" class="divide-y divide-slate-800/60 text-xs"></tbody>
+          <tfoot class="border-t-2 border-slate-700 bg-slate-950 font-mono text-xs font-bold text-white">
+            <tr>
+              <td class="py-3 px-3">TOTAL (50 STATES)</td>
+              <td class="py-3 px-2 text-center">435</td>
+              <td class="py-3 px-2.5 text-slate-400">29 Large · 15 Small · 6 N=1</td>
+              <td class="py-3 px-3 text-slate-200">213 D – 219 R – 1 I – 2 Vac</td>
+              <td class="py-3 px-3 text-slate-200">209 D – 225 R – 1 I</td>
+              <td class="py-3 px-2.5 text-center text-amber-300">+16 R / +10 D</td>
+              <td class="py-3 px-2.5 text-slate-400">11 Redrawn</td>
+              <td class="py-3 px-3 text-center text-indigo-300">Large: |Z| &gt; 2.0σ</td>
+              <td class="py-3 px-3 text-center text-teal-300">Small: &gt;95.0th %ile</td>
+              <td class="py-3 px-3 text-red-400">10/11 Redraws Void (UT Valid)</td>
+              <td class="py-3 px-3 text-emerald-400">Ensemble Median (μ)</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER DISCLOSURE -->
+  <footer class="border-t border-slate-800/80 bg-slate-950 py-5 px-4 sm:px-6 mt-8">
+    <div class="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-slate-400">
+      <div>
+        <span class="font-bold text-slate-300">PGPA Subsection 4–4 &amp; Section 6 Algorithmic Transparency Disclosure:</span>
+        All Large Delegation ($N \ge 5$) Empirical Rule ($\pm 2.0\sigma$) Binomial and Spatial MCMC parameters and Small Delegation ($N \in \{2,3,4\}$) Discrete Seat Count probabilities, Efficiency Gaps ($\text{EG}$), Mean-Median differences ($\text{MM}$), and Neutral Ensemble Percentile Ranks are openly disclosed and verifiable.
+      </div>
+      <div class="font-mono text-[11px] text-slate-500 shrink-0">
+        31st Amendment (PGPA) · Dual Firewall Edition
+      </div>
+    </div>
+  </footer>
+
+  <!-- COMPLETE JAVASCRIPT DUAL FIREWALL COMPUTATIONAL ENGINE -->
+  <script>
+    // ============================================================================
+    // 1. COMPLETE 50-STATE DATASET (EXACT MATCH TO USER'S PDF & SPECIFICATIONS)
+    // ============================================================================
+    const STATES_DATA = [
+      { code: "AL", name: "Alabama", fips: "01", n: 7, preD: 2, preR: 5, preI: 0, preVac: 0, postD: 1, postR: 6, postI: 0, netGainStr: "1 R", netParty: "R", netSeats: 1, bill: "Mid-Decade Redraw",
+        pR: 0.654, mcmcMeanR: 4.90, mcmcSigma: 0.50,
+        egPreVal: "+2.4% R", egPostVal: "+16.8% R", mmPreVal: "+1.8% R", mmPostVal: "+7.9% R", prePct: 48.0, postPct: 98.4,
+        notes: "Pre-2026 map (2D–5R) complied with VRA Sec. 2 (Allen v. Milligan) and PGPA Track A (Z_MCMC = +0.20σ PASS). The 2025–26 mid-decade redraw eliminating the 2nd Democratic seat (1D–6R, +1 R) breaches the +2.0σ Spatial Ensemble firewall (Z_MCMC = +2.20σ FAIL) and violates Section 7." },
+
+      { code: "AK", name: "Alaska", fips: "02", n: 1, preD: 0, preR: 1, preI: 0, preVac: 0, postD: 0, postR: 1, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.569, mcmcMeanR: 1.0, mcmcSigma: 0.49,
+        egPreVal: "0.0%", egPostVal: "0.0%", mmPreVal: "0.0%", mmPostVal: "0.0%", prePct: 50.0, postPct: 50.0,
+        notes: "Single at-large congressional district (N = 1). Constitutional Exempt from redistricting boundary distortion." },
+
+      { code: "AZ", name: "Arizona", fips: "04", n: 9, preD: 3, preR: 6, preI: 0, preVac: 0, postD: 3, postR: 6, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.528, mcmcMeanR: 4.85, mcmcSigma: 0.85,
+        egPreVal: "+8.9% R", egPostVal: "+8.9% R", mmPreVal: "+3.9% R", mmPostVal: "+3.9% R", prePct: 86.0, postPct: 86.0,
+        notes: "Independent Commission map (3D–6R). Competitive swing districts produce a 6R–3D delegation in 2024 that remains inside the ±2.0σ Empirical Rule corridor (Z_MCMC = +1.35σ PASS)." },
+
+      { code: "AR", name: "Arkansas", fips: "05", n: 4, preD: 0, preR: 4, preI: 0, preVac: 0, postD: 0, postR: 4, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.655, mcmcMeanR: 3.15, mcmcSigma: 0.50,
+        discreteProbs: [0.000, 0.005, 0.115, 0.844, 0.036],
+        egPreVal: "+19.4% R", egPostVal: "+19.4% R", mmPreVal: "+6.8% R", mmPostVal: "+6.8% R", prePct: 96.4, postPct: 96.4,
+        notes: "Small Delegation (N = 4 — Empirical Rule ±2σ Inapplicable): Evaluated via Discrete Seat Counts & 95th Percentile Model. The 3-way split of Pulaski County (Little Rock) produces a 0D–4R sweep with an Efficiency Gap of +19.4% R and Mean-Median of +6.8% R, reaching the 96.4th percentile of the neutral ensemble (>95.0th %ile firewall — FAIL)." },
+
+      { code: "CA", name: "California", fips: "06", n: 52, preD: 43, preR: 8, preI: 1, preVac: 0, postD: 48, postR: 3, postI: 1, netGainStr: "5 D", netParty: "D", netSeats: 5, bill: "Prop 50",
+        pR: 0.398, mcmcMeanR: 15.80, mcmcSigma: 2.40,
+        egPreVal: "-13.8% D", egPostVal: "-23.4% D", mmPreVal: "-4.8% D", mmPostVal: "-9.6% D", prePct: 98.9, postPct: 99.99,
+        notes: "2025–26 Prop 50 mid-decade redraw eliminates 5 Republican seats (from 43D–8R–1I to 48D–3R–1I, +5 D). On a 39.8% R vote baseline, reducing Republicans to 3 of 52 seats (5.8%) yields Z_Bin = -5.09σ and Z_MCMC = -5.33σ—per se unconstitutional under Section 4–3 and Section 7." },
+
+      { code: "CO", name: "Colorado", fips: "08", n: 8, preD: 4, preR: 4, preI: 0, preVac: 0, postD: 4, postR: 4, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.444, mcmcMeanR: 3.60, mcmcSigma: 0.75,
+        egPreVal: "+2.1% R", egPostVal: "+2.1% R", mmPreVal: "+1.1% R", mmPostVal: "+1.1% R", prePct: 42.0, postPct: 42.0,
+        notes: "Independent Commission plan yielding a balanced 4D–4R split; well inside the ±2.0σ Empirical Rule corridor (Z_MCMC = +0.53σ PASS)." },
+
+      { code: "CT", name: "Connecticut", fips: "09", n: 5, preD: 5, preR: 0, preI: 0, preVac: 0, postD: 5, postR: 0, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.426, mcmcMeanR: 1.15, mcmcSigma: 0.65,
+        egPreVal: "-14.8% D", egPostVal: "-14.8% D", mmPreVal: "-4.9% D", mmPostVal: "-4.9% D", prePct: 96.5, postPct: 96.5,
+        notes: "Large Delegation (N = 5): 5D–0R delegation with 42.6% R vote share passes Spatial MCMC (Z_MCMC = -1.77σ) due to geographic dispersion, but breaches Binomial proportionality (Z_Bin = -2.11σ FAIL)." },
+
+      { code: "DE", name: "Delaware", fips: "10", n: 1, preD: 1, preR: 0, preI: 0, preVac: 0, postD: 1, postR: 0, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.425, mcmcMeanR: 0.0, mcmcSigma: 0.49,
+        egPreVal: "0.0%", egPostVal: "0.0%", mmPreVal: "0.0%", mmPostVal: "0.0%", prePct: 50.0, postPct: 50.0,
+        notes: "Single at-large congressional district (N = 1). Constitutional Exempt." },
+
+      { code: "FL", name: "Florida", fips: "12", n: 28, preD: 7, preR: 20, preI: 0, preVac: 1, postD: 4, postR: 24, postI: 0, netGainStr: "4 R", netParty: "R", netSeats: 4, bill: "HB 1D",
+        pR: 0.5661, mcmcMeanR: 16.50, mcmcSigma: 1.75,
+        egPreVal: "+12.4% R", egPostVal: "+22.5% R", mmPreVal: "+4.8% R", mmPostVal: "+8.9% R", prePct: 97.5, postPct: 99.98,
+        notes: "2026 HB 1D mid-decade gerrymander expands Republican control from 7D–20R–1Vac to 4D–24R (+4 R). On a 56.61% R baseline, 24 R seats produces Z_Bin = +3.11σ and Z_MCMC = +4.29σ—per se unconstitutional under Section 4–3 and Section 7." },
+
+      { code: "GA", name: "Georgia", fips: "13", n: 14, preD: 5, preR: 9, preI: 0, preVac: 0, postD: 5, postR: 9, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.511, mcmcMeanR: 7.60, mcmcSigma: 0.85,
+        egPreVal: "+11.2% R", egPostVal: "+11.2% R", mmPreVal: "+4.9% R", mmPostVal: "+4.9% R", prePct: 93.0, postPct: 93.0,
+        notes: "5D–9R delegation on a 51.1% R statewide vote yields Z_Bin = +0.99σ and Z_MCMC = +1.65σ (pro-R lean, inside the ±2.0σ Empirical Rule boundary — PASS)." },
+
+      { code: "HI", name: "Hawaii", fips: "15", n: 2, preD: 2, preR: 0, preI: 0, preVac: 0, postD: 2, postR: 0, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.381, mcmcMeanR: 0.08, mcmcSigma: 0.25,
+        discreteProbs: [0.920, 0.080, 0.000],
+        egPreVal: "-11.9% D", egPostVal: "-11.9% D", mmPreVal: "-1.8% D", mmPostVal: "-1.8% D", prePct: 54.0, postPct: 54.0,
+        notes: "Small Delegation (N = 2 — Empirical Rule ±2σ Inapplicable): 92.0% of neutral ensemble simulations produce a 2D–0R delegation on a 38.1% R vote. Efficiency Gap (-11.9% D) and Mean-Median (-1.8% D) rank at the 54.0th percentile (<=95.0th %ile — PASS)." },
+
+      { code: "ID", name: "Idaho", fips: "16", n: 2, preD: 0, preR: 2, preI: 0, preVac: 0, postD: 0, postR: 2, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.688, mcmcMeanR: 1.96, mcmcSigma: 0.20,
+        discreteProbs: [0.000, 0.040, 0.960],
+        egPreVal: "+18.8% R", egPostVal: "+18.8% R", mmPreVal: "+1.4% R", mmPostVal: "+1.4% R", prePct: 48.0, postPct: 48.0,
+        notes: "Small Delegation (N = 2 — Empirical Rule ±2σ Inapplicable): 96.0% of neutral ensemble plans produce 0D–2R on Idaho's 68.8% R vote. Efficiency Gap (+18.8% R) and Mean-Median (+1.4% R) rank at the 48.0th percentile (<=95.0th %ile — PASS)." },
+
+      { code: "IL", name: "Illinois", fips: "17", n: 17, preD: 14, preR: 3, preI: 0, preVac: 0, postD: 14, postR: 3, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.446, mcmcMeanR: 6.30, mcmcSigma: 1.15,
+        egPreVal: "-18.9% D", egPostVal: "-18.9% D", mmPreVal: "-7.4% D", mmPostVal: "-7.4% D", prePct: 99.7, postPct: 99.7,
+        notes: "119th Congress Baseline Gerrymander: 14D–3R on 44.6% R vote breaches the -2.0σ Empirical Rule firewall under both Model 1 (Z_Bin = -2.24σ) and Model 2 (Z_MCMC = -2.87σ). Invalidated upon ratification under Section 7 Immediate Effect Clause." },
+
+      { code: "IN", name: "Indiana", fips: "18", n: 9, preD: 2, preR: 7, preI: 0, preVac: 0, postD: 2, postR: 7, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.597, mcmcMeanR: 6.45, mcmcSigma: 0.65,
+        egPreVal: "+6.4% R", egPostVal: "+6.4% R", mmPreVal: "+3.1% R", mmPostVal: "+3.1% R", prePct: 78.0, postPct: 78.0,
+        notes: "2D–7R map aligns with Indiana's spatial geography under the Empirical Rule (Z_Bin = +1.10σ, Z_MCMC = +0.85σ PASS)." },
+
+      { code: "IA", name: "Iowa", fips: "19", n: 4, preD: 0, preR: 4, preI: 0, preVac: 0, postD: 0, postR: 4, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.567, mcmcMeanR: 2.85, mcmcSigma: 0.65,
+        discreteProbs: [0.005, 0.045, 0.250, 0.535, 0.165],
+        egPreVal: "+36.6% R", egPostVal: "+36.6% R", mmPreVal: "+2.1% R", mmPostVal: "+2.1% R", prePct: 91.5, postPct: 91.5,
+        notes: "Small Delegation (N = 4 — Empirical Rule ±2σ Inapplicable): Non-partisan Legislative Services Agency map with zero county splits. Because Iowa's whole-county rule keeps Mean-Median low (+2.1% R) and 16.5% of neutral maps produce a 0D–4R sweep on a 56.7% R vote, the plan ranks at the 91.5th ensemble percentile (<=95.0th %ile — PASS)." },
+
+      { code: "KS", name: "Kansas", fips: "20", n: 4, preD: 1, preR: 3, preI: 0, preVac: 0, postD: 1, postR: 3, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.582, mcmcMeanR: 2.95, mcmcSigma: 0.45,
+        discreteProbs: [0.000, 0.015, 0.185, 0.630, 0.170],
+        egPreVal: "+8.6% R", egPostVal: "+8.6% R", mmPreVal: "+4.2% R", mmPostVal: "+4.2% R", prePct: 78.5, postPct: 78.5,
+        notes: "Small Delegation (N = 4 — Empirical Rule ±2σ Inapplicable): Because KS-03 held as a Democratic seat, the 1D–3R outcome matches 63.0% of neutral simulations, with EG = +8.6% R and MM = +4.2% R at the 78.5th ensemble percentile (<=95.0th %ile — PASS)." },
+
+      { code: "KY", name: "Kentucky", fips: "21", n: 6, preD: 1, preR: 5, preI: 0, preVac: 0, postD: 1, postR: 5, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.657, mcmcMeanR: 4.85, mcmcSigma: 0.45,
+        egPreVal: "+4.8% R", egPostVal: "+4.8% R", mmPreVal: "+2.7% R", mmPostVal: "+2.7% R", prePct: 68.0, postPct: 68.0,
+        notes: "1D–5R configuration (with Louisville/KY-03 Democratic) matches the neutral ensemble mean (Z_MCMC = +0.33σ PASS)." },
+
+      { code: "LA", name: "Louisiana", fips: "22", n: 6, preD: 2, preR: 4, preI: 0, preVac: 0, postD: 1, postR: 5, postI: 0, netGainStr: "1 R", netParty: "R", netSeats: 1, bill: "Mid-Decade Redraw",
+        pR: 0.612, mcmcMeanR: 3.925, mcmcSigma: 0.50,
+        egPreVal: "+1.9% R", egPostVal: "+17.2% R", mmPreVal: "+1.4% R", mmPostVal: "+7.8% R", prePct: 46.0, postPct: 98.2,
+        notes: "2025–26 mid-decade change reverts Louisiana from 2D–4R (compliant at Z_MCMC = +0.15σ PASS) back to 1D–5R (+1 R), breaching the +2.0σ Empirical Rule firewall (Z_MCMC = +2.15σ FAIL) and violating Section 7." },
+
+      { code: "ME", name: "Maine", fips: "23", n: 2, preD: 2, preR: 0, preI: 0, preVac: 0, postD: 2, postR: 0, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.465, mcmcMeanR: 0.65, mcmcSigma: 0.50,
+        discreteProbs: [0.420, 0.510, 0.070],
+        egPreVal: "-43.0% D", egPostVal: "-43.0% D", mmPreVal: "-2.2% D", mmPostVal: "-2.2% D", prePct: 82.0, postPct: 82.0,
+        notes: "Small Delegation (N = 2 — Empirical Rule ±2σ Inapplicable): Compact North/South 2-district plan where ME-02 is closely contested. Discrete 2D–0R occurs in 42.0% of neutral plans; Mean-Median (-2.2% D) and Ensemble Percentile (82.0th %ile) pass the 95.0th %ile firewall." },
+
+      { code: "MD", name: "Maryland", fips: "24", n: 8, preD: 7, preR: 1, preI: 0, preVac: 0, postD: 7, postR: 1, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.356, mcmcMeanR: 1.85, mcmcSigma: 0.65,
+        egPreVal: "-9.4% D", egPostVal: "-9.4% D", mmPreVal: "-4.1% D", mmPostVal: "-4.1% D", prePct: 89.0, postPct: 89.0,
+        notes: "7D–1R court-approved remedial map yields Z_Bin = -1.36σ and Z_MCMC = -1.31σ (within ±2.0σ Empirical Rule corridor — PASS)." },
+
+      { code: "MA", name: "Massachusetts", fips: "25", n: 9, preD: 9, preR: 0, preI: 0, preVac: 0, postD: 9, postR: 0, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.372, mcmcMeanR: 0.45, mcmcSigma: 0.55,
+        egPreVal: "-11.8% D", egPostVal: "-11.8% D", mmPreVal: "-3.6% D", mmPostVal: "-3.6% D", prePct: 91.0, postPct: 91.0,
+        notes: "9D–0R fails pure Binomial proportionality (Z_Bin = -2.31σ on 37.2% R vote), though Spatial MCMC is Z_MCMC = -0.82σ due to uniform dispersion of Republican voters across Massachusetts towns." },
+
+      { code: "MI", name: "Michigan", fips: "26", n: 13, preD: 6, preR: 7, preI: 0, preVac: 0, postD: 6, postR: 7, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.507, mcmcMeanR: 6.75, mcmcSigma: 0.95,
+        egPreVal: "+1.1% R", egPostVal: "+1.1% R", mmPreVal: "+0.6% R", mmPostVal: "+0.6% R", prePct: 51.0, postPct: 51.0,
+        notes: "Michigan Independent Citizens Redistricting Commission map: 6D–7R on a 50.7% R vote is a textbook zero-skew map (Z_Bin = +0.23σ, Z_MCMC = +0.26σ PASS)." },
+
+      { code: "MN", name: "Minnesota", fips: "27", n: 8, preD: 4, preR: 4, preI: 0, preVac: 0, postD: 4, postR: 4, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.478, mcmcMeanR: 3.90, mcmcSigma: 0.65,
+        egPreVal: "+0.8% R", egPostVal: "+0.8% R", mmPreVal: "+0.5% R", mmPostVal: "+0.5% R", prePct: 49.0, postPct: 49.0,
+        notes: "Court-drawn 4D–4R map achieves near-perfect mathematical neutrality (Z_Bin = +0.13σ, Z_MCMC = +0.15σ PASS)." },
+
+      { code: "MS", name: "Mississippi", fips: "28", n: 4, preD: 1, preR: 3, preI: 0, preVac: 0, postD: 1, postR: 3, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.616, mcmcMeanR: 2.95, mcmcSigma: 0.45,
+        discreteProbs: [0.000, 0.010, 0.140, 0.740, 0.110],
+        egPreVal: "+1.8% R", egPostVal: "+1.8% R", mmPreVal: "+2.4% R", mmPostVal: "+2.4% R", prePct: 42.0, postPct: 42.0,
+        notes: "Small Delegation (N = 4 — Empirical Rule ±2σ Inapplicable): 1D–3R configuration (including VRA majority-Black MS-02) matches 74.0% of neutral ensemble simulations, scoring at EG = +1.8% R, MM = +2.4% R, and the 42.0th ensemble percentile (<=95.0th %ile — PASS)." },
+
+      { code: "MO", name: "Missouri", fips: "29", n: 8, preD: 2, preR: 6, preI: 0, preVac: 0, postD: 1, postR: 7, postI: 0, netGainStr: "1 R (?)", netParty: "R", netSeats: 1, bill: "Prop A",
+        pR: 0.594, mcmcMeanR: 5.68, mcmcSigma: 0.585,
+        egPreVal: "+4.2% R", egPostVal: "+17.9% R", mmPreVal: "+2.4% R", mmPostVal: "+7.6% R", prePct: 64.0, postPct: 98.8,
+        notes: "2025–26 Prop A mid-decade redraw cracks Kansas City (MO-05) to shift Missouri from 2D–6R (Z_MCMC = +0.55σ PASS) to 1D–7R (+1 R [?]). Breaches the +2.0σ Spatial Ensemble firewall (Z_MCMC = +2.25σ FAIL) and violates the Section 7 Frequency Clause." },
+
+      { code: "MT", name: "Montana", fips: "30", n: 2, preD: 0, preR: 2, preI: 0, preVac: 0, postD: 0, postR: 2, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.603, mcmcMeanR: 1.75, mcmcSigma: 0.45,
+        discreteProbs: [0.000, 0.250, 0.750],
+        egPreVal: "+29.4% R", egPostVal: "+29.4% R", mmPreVal: "+3.1% R", mmPostVal: "+3.1% R", prePct: 74.0, postPct: 74.0,
+        notes: "Small Delegation (N = 2 — Empirical Rule ±2σ Inapplicable): East/West bipartisan commission map produces 0D–2R in 75.0% of neutral simulations on a 60.3% R vote. Ranks at the 74.0th ensemble percentile (<=95.0th %ile — PASS)." },
+
+      { code: "NE", name: "Nebraska", fips: "31", n: 3, preD: 0, preR: 3, preI: 0, preVac: 0, postD: 0, postR: 3, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.606, mcmcMeanR: 2.35, mcmcSigma: 0.50,
+        discreteProbs: [0.000, 0.040, 0.570, 0.390],
+        egPreVal: "+28.8% R", egPostVal: "+28.8% R", mmPreVal: "+4.5% R", mmPostVal: "+4.5% R", prePct: 88.5, postPct: 88.5,
+        notes: "Small Delegation (N = 3 — Empirical Rule ±2σ Inapplicable): With Omaha's NE-02 remaining competitive, 39.0% of neutral plans yield 0D–3R. Ranks at the 88.5th ensemble percentile (EG = +28.8% R, MM = +4.5% R — PASS below 95.0th %ile)." },
+
+      { code: "NV", name: "Nevada", fips: "32", n: 4, preD: 3, preR: 1, preI: 0, preVac: 0, postD: 3, postR: 1, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.516, mcmcMeanR: 2.05, mcmcSigma: 0.60,
+        discreteProbs: [0.005, 0.145, 0.630, 0.210, 0.010],
+        egPreVal: "-28.2% D", egPostVal: "-28.2% D", mmPreVal: "-6.9% D", mmPostVal: "-6.9% D", prePct: 98.4, postPct: 98.4,
+        notes: "Small Delegation (N = 4 — Empirical Rule ±2σ Inapplicable): Cracking Clark County (Las Vegas) across three Democratic-leaning seats yields a 3D–1R delegation despite Republicans winning 51.6% of the statewide two-party vote. With EG = -28.2% D and MM = -6.9% D, the map reaches the 98.4th percentile of the neutral ensemble (>95.0th %ile firewall — FAIL)." },
+
+      { code: "NH", name: "New Hampshire", fips: "33", n: 2, preD: 2, preR: 0, preI: 0, preVac: 0, postD: 2, postR: 0, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.486, mcmcMeanR: 0.85, mcmcSigma: 0.55,
+        discreteProbs: [0.340, 0.520, 0.140],
+        egPreVal: "-47.2% D", egPostVal: "-47.2% D", mmPreVal: "-1.9% D", mmPostVal: "-1.9% D", prePct: 86.0, postPct: 86.0,
+        notes: "Small Delegation (N = 2 — Empirical Rule ±2σ Inapplicable): Long-standing 2-district map with two competitive seats. Discrete 2D–0R occurs in 34.0% of neutral maps; Mean-Median (-1.9% D) and Ensemble Percentile (86.0th %ile) remain under the 95.0th %ile firewall (PASS)." },
+
+      { code: "NJ", name: "New Jersey", fips: "34", n: 12, preD: 9, preR: 3, preI: 0, preVac: 0, postD: 9, postR: 3, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.470, mcmcMeanR: 4.65, mcmcSigma: 0.90,
+        egPreVal: "-10.8% D", egPostVal: "-10.8% D", mmPreVal: "-4.5% D", mmPostVal: "-4.5% D", prePct: 94.0, postPct: 94.0,
+        notes: "9D–3R delegation on a 47.0% R / 53.0% D vote share reaches Z_Bin = -1.53σ and Z_MCMC = -1.83σ (borderline Democratic lean, inside ±2.0σ — PASS)." },
+
+      { code: "NM", name: "New Mexico", fips: "35", n: 3, preD: 3, preR: 0, preI: 0, preVac: 0, postD: 3, postR: 0, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.469, mcmcMeanR: 1.15, mcmcSigma: 0.50,
+        discreteProbs: [0.045, 0.755, 0.190, 0.010],
+        egPreVal: "-43.8% D", egPostVal: "-43.8% D", mmPreVal: "-5.8% D", mmPostVal: "-5.8% D", prePct: 97.8, postPct: 97.8,
+        notes: "Small Delegation (N = 3 — Empirical Rule ±2σ Inapplicable): Cracking SE New Mexico / Permian Basin (NM-02) with Albuquerque precincts produces a 3D–0R sweep on a 46.9% R vote. Only 4.5% of neutral maps yield 3D–0R; with EG = -43.8% D and MM = -5.8% D, the map reaches the 97.8th ensemble percentile (>95.0th %ile firewall — FAIL)." },
+
+      { code: "NY", name: "New York", fips: "36", n: 26, preD: 19, preR: 7, preI: 0, preVac: 0, postD: 19, postR: 7, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.441, mcmcMeanR: 8.20, mcmcSigma: 1.35,
+        egPreVal: "-6.4% D", egPostVal: "-6.4% D", mmPreVal: "-2.9% D", mmPostVal: "-2.9% D", prePct: 79.0, postPct: 79.0,
+        notes: "19D–7R map remains within the ±2.0σ Empirical Rule firewall on both Binomial (Z_Bin = -1.76σ) and Spatial MCMC (Z_MCMC = -0.89σ PASS)." },
+
+      { code: "NC", name: "North Carolina", fips: "37", n: 14, preD: 4, preR: 10, preI: 0, preVac: 0, postD: 3, postR: 11, postI: 0, netGainStr: "1 R", netParty: "R", netSeats: 1, bill: "SB 757 / Mid-Decade",
+        pR: 0.516, mcmcMeanR: 7.45, mcmcSigma: 0.90,
+        egPreVal: "+20.4% R", egPostVal: "+27.5% R", mmPreVal: "+5.8% R", mmPostVal: "+7.4% R", prePct: 99.3, postPct: 99.9,
+        notes: "Voluntary 2026 redraw (11R-3D, +1 R) breaches BOTH Model 1 Binomial (Z = +2.02σ) and Model 2 Spatial MCMC (Z = +3.94σ), while Pre-2026 (10R-4D) also failed Model 2 (Z = +2.83σ)." },
+
+      { code: "ND", name: "North Dakota", fips: "38", n: 1, preD: 0, preR: 1, preI: 0, preVac: 0, postD: 0, postR: 1, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.684, mcmcMeanR: 1.0, mcmcSigma: 0.49,
+        egPreVal: "0.0%", egPostVal: "0.0%", mmPreVal: "0.0%", mmPostVal: "0.0%", prePct: 50.0, postPct: 50.0,
+        notes: "Single at-large congressional district (N = 1). Constitutional Exempt." },
+
+      { code: "OH", name: "Ohio", fips: "39", n: 15, preD: 5, preR: 10, preI: 0, preVac: 0, postD: 3, postR: 12, postI: 0, netGainStr: "2 R", netParty: "R", netSeats: 2, bill: "2025–26 Redraw",
+        pR: 0.558, mcmcMeanR: 8.85, mcmcSigma: 1.10,
+        egPreVal: "+7.8% R", egPostVal: "+19.6% R", mmPreVal: "+3.4% R", mmPostVal: "+8.2% R", prePct: 84.0, postPct: 99.5,
+        notes: "2025–26 mid-decade redraw targets OH-09 and OH-13, shifting Ohio from 5D–10R (Z_MCMC = +1.05σ PASS) to 3D–12R (+2 R). Breaches the +2.0σ Spatial MCMC firewall at Z_MCMC = +2.86σ FAIL and violates Section 7." },
+
+      { code: "OK", name: "Oklahoma", fips: "40", n: 5, preD: 0, preR: 5, preI: 0, preVac: 0, postD: 0, postR: 5, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.674, mcmcMeanR: 4.25, mcmcSigma: 0.45,
+        egPreVal: "+13.9% R", egPostVal: "+13.9% R", mmPreVal: "+6.2% R", mmPostVal: "+6.2% R", prePct: 95.8, postPct: 95.8,
+        notes: "Large Delegation (N = 5): 0D–5R map remains inside the ±2.0σ Empirical Rule corridor (Z_Bin = +1.55σ, Z_MCMC = +1.67σ PASS)." },
+
+      { code: "OR", name: "Oregon", fips: "41", n: 6, preD: 5, preR: 1, preI: 0, preVac: 0, postD: 5, postR: 1, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.427, mcmcMeanR: 2.15, mcmcSigma: 0.55,
+        egPreVal: "-16.4% D", egPostVal: "-16.4% D", mmPreVal: "-6.8% D", mmPostVal: "-6.8% D", prePct: 97.6, postPct: 97.6,
+        notes: "Large Delegation (N = 6): 5D–1R delegation on 42.7% R statewide vote breaches the -2.0σ Spatial MCMC firewall (Z_MCMC = -2.09σ FAIL)." },
+
+      { code: "PA", name: "Pennsylvania", fips: "42", n: 17, preD: 7, preR: 10, preI: 0, preVac: 0, postD: 7, postR: 10, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.509, mcmcMeanR: 8.95, mcmcSigma: 1.10,
+        egPreVal: "+5.8% R", egPostVal: "+5.8% R", mmPreVal: "+2.4% R", mmPostVal: "+2.4% R", prePct: 76.0, postPct: 76.0,
+        notes: "Court-selected Carter plan (7D–10R on 50.9% R vote) sits comfortably inside the ±2.0σ Empirical Rule corridor (Z_Bin = +0.65σ, Z_MCMC = +0.95σ PASS)." },
+
+      { code: "RI", name: "Rhode Island", fips: "44", n: 2, preD: 2, preR: 0, preI: 0, preVac: 0, postD: 2, postR: 0, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.426, mcmcMeanR: 0.25, mcmcSigma: 0.40,
+        discreteProbs: [0.760, 0.230, 0.010],
+        egPreVal: "-35.2% D", egPostVal: "-35.2% D", mmPreVal: "-1.2% D", mmPostVal: "-1.2% D", prePct: 51.0, postPct: 51.0,
+        notes: "Small Delegation (N = 2 — Empirical Rule ±2σ Inapplicable): 76.0% of neutral simulations yield 2D–0R on a 42.6% R vote. Mean-Median (-1.2% D) and Ensemble Percentile (51.0th %ile) easily pass the 95.0th %ile firewall." },
+
+      { code: "SC", name: "South Carolina", fips: "45", n: 7, preD: 1, preR: 6, preI: 0, preVac: 0, postD: 1, postR: 6, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.591, mcmcMeanR: 4.85, mcmcSigma: 0.52,
+        egPreVal: "+15.8% R", egPostVal: "+15.8% R", mmPreVal: "+6.9% R", mmPostVal: "+6.9% R", prePct: 98.1, postPct: 98.1,
+        notes: "1D–6R map (cracking Charleston/SC-01) breaches the +2.0σ Spatial MCMC firewall at Z_MCMC = +2.21σ FAIL." },
+
+      { code: "SD", name: "South Dakota", fips: "46", n: 1, preD: 0, preR: 1, preI: 0, preVac: 0, postD: 0, postR: 1, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.650, mcmcMeanR: 1.0, mcmcSigma: 0.49,
+        egPreVal: "0.0%", egPostVal: "0.0%", mmPreVal: "0.0%", mmPostVal: "0.0%", prePct: 50.0, postPct: 50.0,
+        notes: "Single at-large congressional district (N = 1). Constitutional Exempt." },
+
+      { code: "TN", name: "Tennessee", fips: "47", n: 9, preD: 1, preR: 8, preI: 0, preVac: 0, postD: 0, postR: 9, postI: 0, netGainStr: "1 R", netParty: "R", netSeats: 1, bill: "HB 7003",
+        pR: 0.6506, mcmcMeanR: 7.35, mcmcSigma: 0.48,
+        egPreVal: "+10.6% R", egPostVal: "+21.9% R", mmPreVal: "+4.9% R", mmPostVal: "+9.4% R", prePct: 92.0, postPct: 99.9,
+        notes: "2026 mid-decade gerrymander fractures Memphis/Shelby County (TN-09) to shift Tennessee from 1D–8R (Pre Z_Bin = +1.50σ, Z_MCMC = +1.35σ PASS) to 0D–9R (+1 R). Breaches the +2.0σ Empirical Rule under both Model 1 Binomial (Z_Bin = +2.20σ) and Model 2 Spatial MCMC (Z_MCMC = +3.44σ FAIL), and violates Section 7." },
+
+      { code: "TX", name: "Texas", fips: "48", n: 38, preD: 12, preR: 25, preI: 0, preVac: 1, postD: 8, postR: 30, postI: 0, netGainStr: "5 R", netParty: "R", netSeats: 5, bill: "HB 4",
+        pR: 0.5694, mcmcMeanR: 22.20, mcmcSigma: 2.00,
+        egPreVal: "+8.4% R", egPostVal: "+20.8% R", mmPreVal: "+4.1% R", mmPostVal: "+8.7% R", prePct: 92.0, postPct: 99.99,
+        notes: "2025–26 mid-decade redraw shifts Texas from 12D–25R–1Vac (Pre Z_Bin = +1.10σ, Z_MCMC = +1.40σ PASS) to 8D–30R (+5 R). Breaches the +2.0σ Empirical Rule on both Model 1 (Z_Bin = +2.74σ) and Model 2 (Z_MCMC = +3.90σ FAIL) and violates Section 7." },
+
+      { code: "UT", name: "Utah", fips: "49", n: 4, preD: 0, preR: 4, preI: 0, preVac: 0, postD: 1, postR: 3, postI: 0, netGainStr: "1 D", netParty: "D", netSeats: 1, bill: "Prop 4",
+        pR: 0.605, mcmcMeanR: 2.85, mcmcSigma: 0.45,
+        discreteProbs: [0.001, 0.011, 0.200, 0.784, 0.004],
+        egPreVal: "+27.8% R", egPostVal: "+2.8% R", mmPreVal: "+8.4% R", mmPostVal: "+1.5% R", prePct: 99.6, postPct: 52.0,
+        notes: "THE SOLE CONSTITUTIONAL REDRAW (Small Delegation N = 4 — Discrete 95th Percentile Model): Pre-2026 map (0D–4R) cracked Salt Lake County across 4 districts; discrete 0D–4R occurs in <0.4% of neutral maps, with EG = +27.8% R, MM = +8.4% R, and Ensemble Percentile = 99.6th %ile (>95.0th %ile — FAIL). Post-2026 (1D–3R, Prop 4 Court Remedy) occurs in 78.4% of neutral maps, reducing EG to +2.8% R, MM to +1.5% R, and Ensemble Percentile to 52.0th %ile (<=95.0th %ile — PASS, and compliant with Sec. 7 court-remedy exception)." },
+
+      { code: "VT", name: "Vermont", fips: "50", n: 1, preD: 1, preR: 0, preI: 0, preVac: 0, postD: 1, postR: 0, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.335, mcmcMeanR: 0.0, mcmcSigma: 0.49,
+        egPreVal: "0.0%", egPostVal: "0.0%", mmPreVal: "0.0%", mmPostVal: "0.0%", prePct: 50.0, postPct: 50.0,
+        notes: "Single at-large congressional district (N = 1). Constitutional Exempt." },
+
+      { code: "VA", name: "Virginia", fips: "51", n: 11, preD: 6, preR: 5, preI: 0, preVac: 0, postD: 10, postR: 1, postI: 0, netGainStr: "4 D (x)", netParty: "D", netSeats: 4, bill: "referendum",
+        pR: 0.471, mcmcMeanR: 5.10, mcmcSigma: 0.95,
+        egPreVal: "-1.4% D", egPostVal: "-31.2% D", mmPreVal: "-0.8% D", mmPostVal: "-11.4% D", prePct: 48.0, postPct: 99.98,
+        notes: "Virginia's Pre-2026 court-drawn map (6D–5R) was a model of mathematical neutrality (Z_Bin = -0.11σ, Z_MCMC = -0.11σ PASS). The 2025–26 mid-decade referendum map (10D–1R, +4 D [x]) severely cracks Republican voters, crashing to Z_Bin = -2.52σ and Z_MCMC = -4.32σ—per se unconstitutional under Section 4–3 and Section 7." },
+
+      { code: "WA", name: "Washington", fips: "53", n: 10, preD: 8, preR: 2, preI: 0, preVac: 0, postD: 8, postR: 2, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.409, mcmcMeanR: 3.15, mcmcSigma: 0.75,
+        egPreVal: "-9.2% D", egPostVal: "-9.2% D", mmPreVal: "-3.8% D", mmPostVal: "-3.8% D", prePct: 88.0, postPct: 88.0,
+        notes: "Bipartisan Commission 8D–2R map remains within the ±2.0σ Empirical Rule firewall (Z_Bin = -1.34σ, Z_MCMC = -1.53σ PASS)." },
+
+      { code: "WV", name: "West Virginia", fips: "54", n: 2, preD: 0, preR: 2, preI: 0, preVac: 0, postD: 0, postR: 2, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.714, mcmcMeanR: 1.98, mcmcSigma: 0.15,
+        discreteProbs: [0.000, 0.015, 0.985],
+        egPreVal: "+7.2% R", egPostVal: "+7.2% R", mmPreVal: "+0.9% R", mmPostVal: "+0.9% R", prePct: 44.0, postPct: 44.0,
+        notes: "Small Delegation (N = 2 — Empirical Rule ±2σ Inapplicable): 98.5% of neutral simulations produce 0D–2R on West Virginia's 71.4% R vote across all 55 counties. With EG = +7.2% R and MM = +0.9% R, the map ranks at the 44.0th ensemble percentile (<=95.0th %ile — PASS)." },
+
+      { code: "WI", name: "Wisconsin", fips: "55", n: 8, preD: 2, preR: 6, preI: 0, preVac: 0, postD: 2, postR: 6, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.504, mcmcMeanR: 4.35, mcmcSigma: 0.70,
+        egPreVal: "+16.9% R", egPostVal: "+16.9% R", mmPreVal: "+6.8% R", mmPostVal: "+6.8% R", prePct: 98.7, postPct: 98.7,
+        notes: "119th Congress Baseline Gerrymander: 2D–6R on a 50.4% R / 49.6% D statewide vote breaches the +2.0σ Spatial MCMC firewall at Z_MCMC = +2.36σ FAIL." },
+
+      { code: "WY", name: "Wyoming", fips: "56", n: 1, preD: 0, preR: 1, preI: 0, preVac: 0, postD: 0, postR: 1, postI: 0, netGainStr: "", netParty: null, netSeats: 0, bill: "",
+        pR: 0.733, mcmcMeanR: 1.0, mcmcSigma: 0.49,
+        egPreVal: "0.0%", egPostVal: "0.0%", mmPreVal: "0.0%", mmPostVal: "0.0%", prePct: 50.0, postPct: 50.0,
+        notes: "Single at-large congressional district (N = 1). Constitutional Exempt." }
+    ];
+
+    // Cartogram Grid Coordinates (row, col) for all 50 states
+    const CARTO_COORDS = {
+      AK:[0,0], ME:[0,11],
+      VT:[1,9], NH:[1,10], MA:[1,11],
+      WA:[2,1], ID:[2,2], MT:[2,3], ND:[2,4], MN:[2,5], WI:[2,6], MI:[2,7], NY:[2,9], CT:[2,10], RI:[2,11],
+      OR:[3,1], NV:[3,2], WY:[3,3], SD:[3,4], IA:[3,5], IL:[3,6], IN:[3,7], OH:[3,8], PA:[3,9], NJ:[3,10],
+      CA:[4,1], UT:[4,2], CO:[4,3], NE:[4,4], MO:[4,5], KY:[4,6], WV:[4,7], VA:[4,8], MD:[4,9], DE:[4,10],
+      AZ:[5,2], NM:[5,3], KS:[5,4], AR:[5,5], TN:[5,6], NC:[5,7], SC:[5,8],
+      OK:[6,4], LA:[6,5], MS:[6,6], AL:[6,7], GA:[6,8],
+      HI:[7,0], TX:[7,4], FL:[7,8]
+    };
+
+    // ============================================================================
+    // 2. APPLICATION STATE & DUAL FIREWALL COMPUTATION ENGINE
+    // ============================================================================
+    let currentMapGeometry = 'geo';      // 'geo' | 'carto'
+    let currentMapMode = 'gains';        // 'gains' | 'verdict2026' | 'regime' | 'verdictPre'
+    let selectedStateCode = 'UT';        // Default to Utah to showcase the Small Delegation 95th %ile Remedy
+    let currentTableFilter = 'all';      // 'all' | 'changed' | 'large' | 'small' | 'unconstitutional'
+    let sigmaMultiplier = 1.00;          // Calibrates Spatial MCMC sigma for Large Delegations
+    let bellCurveModel = 'mcmc';         // 'mcmc' | 'binom'
+    let usTopoJsonCache = null;
+
+    function computeStateAudit(st) {
+      const N = st.n;
+      const pR = st.pR;
+      const pD = 1 - pR;
+
+      // Classify Regime strictly by Delegation Size N
+      const regime = N === 1 ? 'single' : (N <= 4 ? 'small' : 'large');
+
+      // Model 1: Binomial Proportional (Active for Large N >= 5)
+      const muBinR = N * pR;
+      const sigmaBin = Math.sqrt(N * pR * pD);
+      const zBinPre = sigmaBin > 0 ? (st.preR - muBinR) / sigmaBin : 0;
+      const zBinPost = sigmaBin > 0 ? (st.postR - muBinR) / sigmaBin : 0;
+
+      // Model 2: Spatial MCMC Ensemble (Active for Large N >= 5)
+      const muMcmcR = st.mcmcMeanR;
+      const sigmaMcmc = st.mcmcSigma * sigmaMultiplier;
+      const zMcmcPre = sigmaMcmc > 0 ? (st.preR - muMcmcR) / sigmaMcmc : 0;
+      const zMcmcPost = sigmaMcmc > 0 ? (st.postR - muMcmcR) / sigmaMcmc : 0;
+
+      // Section 7 Mid-Decade Frequency Clause
+      const isMidDecadeRedraw = st.netParty !== null;
+      const isCourtRemedy = st.code === 'UT';
+      const sec7Pass = !isMidDecadeRedraw || isCourtRemedy;
+
+      // Evaluate Pre-2026 and Post-2026 under the state's active Section 4-3 regime
+      let prePass = true;
+      let postPass = true;
+
+      if (regime === 'large') {
+        const preFailsStat = Math.abs(zBinPre) > 2.0 || Math.abs(zMcmcPre) > 2.0;
+        const postFailsStat = Math.abs(zBinPost) > 2.0 || Math.abs(zMcmcPost) > 2.0;
+        prePass = !preFailsStat;
+        postPass = !postFailsStat && sec7Pass;
+      } else if (regime === 'small') {
+        const preFails95 = st.prePct > 95.0;
+        const postFails95 = st.postPct > 95.0;
+        prePass = !preFails95;
+        postPass = !postFails95 && sec7Pass;
+      } else {
+        prePass = true;
+        postPass = true;
+      }
+
+      // Section 3 Mandatory Remedy Target Split
+      const remR = Math.round(muMcmcR);
+      const remD = N - remR;
+
+      return {
+        ...st,
+        pD,
+        regime,
+        muBinR,
+        sigmaBin,
+        zBinPre,
+        zBinPost,
+        muMcmcR,
+        sigmaMcmc,
+        zMcmcPre,
+        zMcmcPost,
+        isMidDecadeRedraw,
+        isCourtRemedy,
+        sec7Pass,
+        prePass,
+        postPass,
+        remR,
+        remD
+      };
+    }
+
+    function getAllAuditedStates() {
+      return STATES_DATA.map(computeStateAudit);
+    }
+
+    // ============================================================================
+    // 3. COLOR SCALES & STYLING HELPERS FOR THE 4 MAP MODES
+    // ============================================================================
+    function getStateFillColor(audit) {
+      if (currentMapMode === 'gains') {
+        if (audit.netParty === 'D') {
+          if (audit.netSeats >= 5) return '#1d4ed8'; // CA (+5D)
+          if (audit.netSeats >= 4) return '#2563eb'; // VA (+4D)
+          return '#3b82f6';                          // UT (+1D)
+        }
+        if (audit.netParty === 'R') {
+          if (audit.netSeats >= 5) return '#b91c1c'; // TX (+5R)
+          if (audit.netSeats >= 4) return '#dc2626'; // FL (+4R)
+          if (audit.netSeats >= 2) return '#ef4444'; // OH (+2R)
+          return '#f87171';                          // AL, LA, MO, TN (+1R)
+        }
+        return '#1e293b'; // Unchanged
+      }
+
+      if (currentMapMode === 'verdict2026') {
+        if (audit.regime === 'single') return '#334155';
+        if (audit.isCourtRemedy && audit.postPass) return '#10b981'; // UT Prop 4 Remedied
+        if (!audit.postPass) {
+          return audit.regime === 'large' ? '#dc2626' : '#f59e0b'; // Red = Fails ±2σ, Amber = Fails 95th %ile
+        }
+        return '#059669'; // Compliant
+      }
+
+      if (currentMapMode === 'regime') {
+        if (audit.regime === 'large') return '#4f46e5'; // Indigo = Large N>=5 (±2σ)
+        if (audit.regime === 'small') return '#0d9488'; // Teal = Small N=2..4 (95th %ile)
+        return '#475569';                               // Slate = Single Seat N=1
+      }
+
+      if (currentMapMode === 'verdictPre') {
+        if (audit.regime === 'single') return '#334155';
+        if (!audit.prePass) {
+          return audit.regime === 'large' ? '#dc2626' : '#f59e0b';
+        }
+        return '#059669';
+      }
+
+      return '#1e293b';
+    }
+
+    function formatZ(z) {
+      const sign = z >= 0 ? '+' : '';
+      return `${sign}${z.toFixed(2)}σ`;
+    }
+
+    // ============================================================================
+    // 4. QUICK-SELECT PILL BARS & SMALL DELEGATIONS MATRIX
+    // ============================================================================
+    function renderQuickPills() {
+      const audited = getAllAuditedStates();
+
+      // 1. 10 Redrawn States Pills
+      const redrawContainer = document.getElementById('quickRedrawPills');
+      const changed = audited.filter(s => s.netParty !== null).sort((a, b) => {
+        if (a.netParty !== b.netParty) return a.netParty === 'D' ? -1 : 1;
+        return b.netSeats - a.netSeats;
+      });
+
+      redrawContainer.innerHTML = changed.map(st => {
+        const isSel = st.code === selectedStateCode;
+        const isDem = st.netParty === 'D';
+        const baseCls = isDem
+          ? 'bg-blue-950/90 text-blue-200 border-blue-500/50 hover:bg-blue-900'
+          : 'bg-red-950/90 text-red-200 border-red-500/50 hover:bg-red-900';
+        const selRing = isSel ? 'ring-2 ring-yellow-400 font-bold' : '';
+        const modelTag = st.regime === 'small' ? '95th% PASS' : `${formatZ(st.zMcmcPost)}`;
+        return `
+          <button onclick="selectState('${st.code}')"
+            class="px-2.5 py-1 rounded-lg text-xs font-mono border transition flex items-center gap-1.5 ${baseCls} ${selRing}">
+            <span class="font-bold">${st.code}</span>
+            <span class="opacity-90">+${st.netGainStr}</span>
+            <span class="text-[10px] px-1 rounded bg-black/40">${modelTag}</span>
+          </button>
+        `;
+      }).join('');
+
+      // 2. 15 Small Delegation States Pills (N = 2, 3, 4)
+      const smallContainer = document.getElementById('quickSmallPills');
+      const smallStates = audited.filter(s => s.regime === 'small').sort((a, b) => b.postPct - a.postPct);
+
+      smallContainer.innerHTML = smallStates.map(st => {
+        const isSel = st.code === selectedStateCode;
+        const fails95 = !st.postPass;
+        const isRemedy = st.code === 'UT';
+        let baseCls = 'bg-slate-800/90 text-teal-200 border-teal-500/40 hover:bg-slate-800';
+        if (fails95) baseCls = 'bg-amber-950/90 text-amber-200 border-amber-500/60 hover:bg-amber-900';
+        if (isRemedy) baseCls = 'bg-emerald-950/90 text-emerald-200 border-emerald-500/60 hover:bg-emerald-900';
+        const selRing = isSel ? 'ring-2 ring-yellow-400 font-bold' : '';
+        return `
+          <button onclick="selectState('${st.code}')"
+            class="px-2 py-1 rounded-lg text-[11px] font-mono border transition flex items-center gap-1 ${baseCls} ${selRing}">
+            <span class="font-bold">${st.code}</span>
+            <span class="text-[10px] opacity-80">(N=${st.n})</span>
+            <span class="text-[10px] px-1 rounded bg-black/30">${st.postPct.toFixed(1)}%</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderSmallStatesMatrix() {
+      const audited = getAllAuditedStates();
+      const smallStates = audited.filter(s => s.regime === 'small').sort((a, b) => {
+        if (a.code === 'UT') return -1;
+        if (b.code === 'UT') return 1;
+        return b.postPct - a.postPct;
+      });
+
+      const grid = document.getElementById('smallStatesMatrixGrid');
+      grid.innerHTML = smallStates.map(st => {
+        const isSel = st.code === selectedStateCode;
+        const fails95 = !st.postPass;
+        const isUT = st.code === 'UT';
+
+        let borderCls = 'border-slate-800 hover:border-teal-500/50';
+        let badgeHtml = `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">PASS (≤95th)</span>`;
+
+        if (fails95) {
+          borderCls = 'border-amber-500/50 bg-amber-950/15 hover:border-amber-400';
+          badgeHtml = `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/40">FAIL (&gt;95th)</span>`;
+        } else if (isUT) {
+          borderCls = 'border-emerald-500/60 bg-emerald-950/20 hover:border-emerald-400';
+          badgeHtml = `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/25 text-emerald-200 border border-emerald-400/50">PROP 4 REMEDY</span>`;
+        }
+
+        if (isSel) borderCls += ' ring-2 ring-yellow-400';
+
+        const modalIdx = st.discreteProbs.indexOf(Math.max(...st.discreteProbs));
+        const enactedProb = (st.discreteProbs[st.postR] * 100).toFixed(1);
+
+        return `
+          <div onclick="selectState('${st.code}')"
+            class="rounded-xl p-3.5 bg-slate-950/90 border transition cursor-pointer flex flex-col justify-between ${borderCls}">
+            <div>
+              <div class="flex items-center justify-between gap-1">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-mono font-bold text-xs px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300">${st.code}</span>
+                  <span class="font-bold text-white text-sm">${st.name}</span>
+                </div>
+                ${badgeHtml}
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 mt-2">
+                <span>Seats: <strong class="text-slate-200">N = ${st.n}</strong></span>
+                <span>Split: <strong class="text-white">${isUT ? '0D–4R → 1D–3R' : `${st.postD}D–${st.postR}R`}</strong></span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-1.5 mt-2.5 text-[11px] font-mono bg-slate-900/90 p-2 rounded-lg border border-slate-800/80">
+                <div>
+                  <div class="text-[10px] text-slate-400">Eff. Gap (EG)</div>
+                  <div class="font-bold text-slate-200">${isUT ? '+27.8%→+2.8%' : st.egPostVal}</div>
+                </div>
+                <div>
+                  <div class="text-[10px] text-slate-400">Mean-Med (MM)</div>
+                  <div class="font-bold text-slate-200">${isUT ? '+8.4%→+1.5%' : st.mmPostVal}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3 pt-2 border-t border-slate-800/80">
+              <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+                <span class="text-slate-400">Ensemble %ile:</span>
+                <span class="font-bold ${fails95 ? 'text-amber-300' : 'text-teal-300'}">
+                  ${isUT ? '99.6th → 52.0th' : `${st.postPct.toFixed(1)}th %ile`}
+                </span>
+              </div>
+              <div class="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div class="h-full ${fails95 ? 'bg-amber-400' : 'bg-teal-400'}" style="width: ${Math.min(100, st.postPct)}%"></div>
+                <div class="absolute top-0 bottom-0 border-l border-red-400" style="left: 95%"></div>
+              </div>
+              <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
+                <span>P(${st.postD}D–${st.postR}R) = ${enactedProb}%</span>
+                <span>Modal: ${st.n - modalIdx}D–${modalIdx}R</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ============================================================================
+    // 5. GEOGRAPHIC SVG MAP & 50-STATE CARTOGRAM RENDERER
+    // ============================================================================
+    async function initGeographicMap() {
+      const svg = d3.select('#usGeoSvg');
+      try {
+        if (!usTopoJsonCache) {
+          const response = await fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-albers-10m.json');
+          usTopoJsonCache = await response.json();
+        }
+        renderGeographicMap();
+      } catch (err) {
+        console.warn('TopoJSON load fallback to 50-State Grid:', err);
+        setMapGeometry('carto');
+      }
+    }
+
+    function renderGeographicMap() {
+      if (!usTopoJsonCache) return;
+      const svg = d3.select('#usGeoSvg');
+      svg.selectAll('*').remove();
+
+      const audited = getAllAuditedStates();
+      const fipsMap = {};
+      audited.forEach(s => { fipsMap[s.fips] = s; });
+
+      const statesGeo = topojson.feature(usTopoJsonCache, usTopoJsonCache.objects.states).features;
+      const pathGen = d3.geoPath();
+
+      const g = svg.append('g');
+
+      g.selectAll('path')
+        .data(statesGeo)
+        .join('path')
+        .attr('d', pathGen)
+        .attr('class', d => {
+          const st = fipsMap[String(d.id).padStart(2, '0')];
+          if (!st) return 'state-path';
+          return `state-path ${st.code === selectedStateCode ? 'state-selected' : ''}`;
+        })
+        .attr('fill', d => {
+          const st = fipsMap[String(d.id).padStart(2, '0')];
+          return st ? getStateFillColor(st) : '#1e293b';
+        })
+        .attr('stroke', d => {
+          const st = fipsMap[String(d.id).padStart(2, '0')];
+          if (!st) return '#0f172a';
+          if (st.code === selectedStateCode) return '#facc15';
+          if (st.regime === 'small' && currentMapMode === 'gains') return '#2dd4bf';
+          return '#0f172a';
+        })
+        .attr('stroke-width', d => {
+          const st = fipsMap[String(d.id).padStart(2, '0')];
+          if (!st) return 1;
+          if (st.code === selectedStateCode) return 2.8;
+          if (st.regime === 'small' && currentMapMode === 'gains') return 1.5;
+          return 1.1;
+        })
+        .attr('stroke-dasharray', d => {
+          const st = fipsMap[String(d.id).padStart(2, '0')];
+          if (st && st.regime === 'small' && currentMapMode === 'gains' && st.code !== selectedStateCode) {
+            return '3,2';
+          }
+          return null;
+        })
+        .on('click', (event, d) => {
+          const st = fipsMap[String(d.id).padStart(2, '0')];
+          if (st) selectState(st.code);
+        })
+        .on('mousemove', (event, d) => {
+          const st = fipsMap[String(d.id).padStart(2, '0')];
+          if (st) showTooltip(event, st);
+        })
+        .on('mouseleave', hideTooltip);
+
+      // State Labels + Net Gain or Regime Badges
+      g.selectAll('text')
+        .data(statesGeo)
+        .join('text')
+        .attr('transform', d => {
+          const c = pathGen.centroid(d);
+          return isNaN(c[0]) ? 'translate(-999,-999)' : `translate(${c[0]},${c[1]})`;
+        })
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.32em')
+        .attr('pointer-events', 'none')
+        .attr('class', 'font-mono font-bold fill-white drop-shadow')
+        .style('font-size', d => {
+          const st = fipsMap[String(d.id).padStart(2, '0')];
+          return st && st.netParty ? '10px' : '8.5px';
+        })
+        .text(d => {
+          const st = fipsMap[String(d.id).padStart(2, '0')];
+          if (!st) return '';
+          if (st.netParty) return `${st.code} (+${st.netSeats}${st.netParty})`;
+          return st.code;
+        });
+    }
+
+    function renderCartogramGrid() {
+      const container = document.getElementById('usCartoGrid');
+      const audited = getAllAuditedStates();
+      const coordMap = {};
+      audited.forEach(st => {
+        const rc = CARTO_COORDS[st.code];
+        if (rc) coordMap[`${rc[0]}_${rc[1]}`] = st;
+      });
+
+      let html = '';
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 12; c++) {
+          const st = coordMap[`${r}_${c}`];
+          if (!st) {
+            html += `<div class="h-14 rounded-lg bg-transparent"></div>`;
+          } else {
+            const bg = getStateFillColor(st);
+            const isSel = st.code === selectedStateCode;
+            const selCls = isSel ? 'ring-2 ring-yellow-400 scale-105 z-10' : 'border border-slate-700/80';
+            const subLine = st.netParty
+              ? `+${st.netGainStr}`
+              : (st.regime === 'small' ? `${st.postPct.toFixed(0)}th%` : (st.regime === 'large' ? formatZ(st.zMcmcPost) : 'N=1'));
+            html += `
+              <div onclick="selectState('${st.code}')"
+                onmousemove="showTooltipByCode(event, '${st.code}')"
+                onmouseleave="hideTooltip()"
+                style="background-color: ${bg}"
+                class="carto-tile h-14 rounded-lg p-1 flex flex-col items-center justify-center text-center shadow ${selCls}">
+                <div class="font-mono font-bold text-xs text-white leading-tight">${st.code}</div>
+                <div class="font-mono text-[10px] text-slate-100/90 leading-tight">${st.postD}D-${st.postR}R</div>
+                <div class="font-mono text-[9px] px-1 rounded bg-black/35 text-amber-200 mt-0.5">${subLine}</div>
+              </div>
+            `;
+          }
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    function renderMapLegend() {
+      const legend = document.getElementById('mapLegend');
+      if (currentMapMode === 'gains') {
+        legend.innerHTML = `
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-600 inline-block"></span> Democratic Gain (CA +5D, VA +4D, UT +1D)</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-600 inline-block"></span> Republican Gain (TX +5R, FL +4R, OH +2R, AL/LA/MO/NC/TN +1R)</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-800 border border-slate-600 inline-block"></span> No Mid-Decade Change (40)</span>
+          </div>
+          <span class="font-mono text-[11px] text-teal-300">Dashed Teal Border = Small Delegation (N=2–4 · 95th %ile Model)</span>
+        `;
+      } else if (currentMapMode === 'verdict2026' || currentMapMode === 'verdictPre') {
+        legend.innerHTML = `
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-600 inline-block"></span> Large State (N≥5) Fails ±2.0σ Empirical Rule</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span> Small State (N=2–4) Fails &gt;95.0th %ile Discrete Firewall</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-600 inline-block"></span> Constitutional / Remedied</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-700 inline-block"></span> Single-Seat Exempt (N=1)</span>
+          </div>
+        `;
+      } else {
+        legend.innerHTML = `
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-indigo-600 inline-block"></span> Large Delegation (N ≥ 5 · 29 States): Empirical Rule (±2.0σ Z-Score)</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-teal-600 inline-block"></span> Small Delegation (N = 2–4 · 15 States): Discrete Seat &amp; 95th %ile EG/MM</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-600 inline-block"></span> Single District (N = 1 · 6 States): At-Large Exempt</span>
+          </div>
+        `;
+      }
+    }
+
+    function showTooltipByCode(event, code) {
+      const st = getAllAuditedStates().find(s => s.code === code);
+      if (st) showTooltip(event, st);
+    }
+
+    function showTooltip(event, st) {
+      const tip = document.getElementById('mapTooltip');
+      tip.classList.remove('hidden');
+
+      const regimeLabel = st.regime === 'large'
+        ? 'Large Delegation (N ≥ 5) • ±2.0σ Empirical Rule'
+        : (st.regime === 'small' ? 'Small Delegation (N = 2–4) • 95th %ile Discrete Model' : 'At-Large (N = 1) • Exempt');
+
+      const metricHtml = st.regime === 'large'
+        ? `<div class="mt-1.5 pt-1.5 border-t border-slate-800 font-mono text-[11px] space-y-0.5">
+             <div>Model 1 Binomial Z: <strong class="${Math.abs(st.zBinPost)>2?'text-red-400':'text-emerald-400'}">${formatZ(st.zBinPre)} → ${formatZ(st.zBinPost)}</strong></div>
+             <div>Model 2 Spatial MCMC Z: <strong class="${Math.abs(st.zMcmcPost)>2?'text-red-400':'text-emerald-400'}">${formatZ(st.zMcmcPre)} → ${formatZ(st.zMcmcPost)}</strong></div>
+           </div>`
+        : (st.regime === 'small'
+          ? `<div class="mt-1.5 pt-1.5 border-t border-slate-800 font-mono text-[11px] space-y-0.5">
+               <div class="text-amber-300">Empirical Rule (±2σ): INAPPLICABLE</div>
+               <div>Efficiency Gap: <strong>${st.egPostVal}</strong> · Mean-Median: <strong>${st.mmPostVal}</strong></div>
+               <div>Ensemble Percentile: <strong class="${st.postPct>95?'text-red-400':'text-emerald-400'}">${st.code==='UT'?'99.6th → 52.0th %ile':st.postPct.toFixed(1)+'th %ile'}</strong> (Cutoff: 95.0th)</div>
+             </div>`
+          : '');
+
+      tip.innerHTML = `
+        <div class="flex items-center justify-between gap-3">
+          <span class="font-bold text-white text-sm">${st.name} (${st.code})</span>
+          <span class="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">N = ${st.n}</span>
+        </div>
+        <div class="text-[10px] font-mono text-teal-300 mt-0.5">${regimeLabel}</div>
+        <div class="mt-1.5 font-mono text-xs text-slate-200">
+          119th: <strong>${st.preD}D–${st.preR}R${st.preI?`–${st.preI}I`:''}${st.preVac?`–${st.preVac}Vac`:''}</strong>
+          → 2026: <strong>${st.postD}D–${st.postR}R${st.postI?`–${st.postI}I`:''}</strong>
+        </div>
+        ${st.netParty ? `<div class="text-[11px] font-mono font-bold ${st.netParty==='D'?'text-blue-400':'text-red-400'}">Net Gain: +${st.netGainStr} ${st.bill?`(${st.bill})`:''}</div>` : ''}
+        ${metricHtml}
+      `;
+
+      const x = Math.min(window.innerWidth - 330, event.clientX + 16);
+      const y = Math.min(window.innerHeight - 200, event.clientY + 16);
+      tip.style.left = `${x}px`;
+      tip.style.top = `${y}px`;
+    }
+
+    function hideTooltip() {
+      document.getElementById('mapTooltip').classList.add('hidden');
+    }
+
+    // ============================================================================
+    // 6. RIGHT-HAND DYNAMIC DUAL-FIREWALL STATE INSPECTOR
+    // ============================================================================
+    function renderSelectedStateAudit() {
+      const st = getAllAuditedStates().find(s => s.code === selectedStateCode);
+      if (!st) return;
+
+      document.getElementById('auditStateCode').textContent = st.code;
+      document.getElementById('auditStateName').textContent = st.name;
+      document.getElementById('auditSeatsBadge').textContent = `(N = ${st.n} District${st.n > 1 ? 's' : ''})`;
+
+      // Subtitle
+      const subEl = document.getElementById('auditBillSub');
+      if (st.netParty) {
+        subEl.textContent = `2025–26 Mid-Decade Redraw: +${st.netGainStr} Net Gain ${st.bill ? `· Bill: ${st.bill}` : ''}`;
+        subEl.className = `text-xs font-mono mt-1 ${st.netParty === 'D' ? 'text-blue-400' : 'text-red-400'}`;
+      } else {
+        subEl.textContent = `No 2025–2026 Mid-Decade Redistricting Enacted (119th Baseline Retained)`;
+        subEl.className = 'text-xs font-mono mt-1 text-slate-400';
+      }
+
+      // Verdict Badge
+      const vBadge = document.getElementById('auditVerdictBadge');
+      if (st.regime === 'single') {
+        vBadge.textContent = 'EXEMPT (N = 1 AT-LARGE)';
+        vBadge.className = 'px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider border bg-slate-800 text-slate-300 border-slate-700 shrink-0';
+      } else if (st.isCourtRemedy && st.postPass) {
+        vBadge.textContent = 'REMEDIED (PASS ≤95th %ILE)';
+        vBadge.className = 'px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shrink-0';
+      } else if (!st.postPass) {
+        vBadge.textContent = st.regime === 'large' ? 'PER SE UNCONSTITUTIONAL (>2σ)' : 'PER SE UNCONSTITUTIONAL (>95th %ILE)';
+        vBadge.className = 'px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider border bg-red-500/20 text-red-300 border-red-500/40 shrink-0';
+      } else {
+        vBadge.textContent = st.regime === 'large' ? 'COMPLIANT (|Z| ≤ 2.0σ)' : 'COMPLIANT (≤95.0th %ILE)';
+        vBadge.className = 'px-3 py-1.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider border bg-emerald-500/15 text-emerald-300 border-emerald-500/30 shrink-0';
+      }
+
+      // Regime Routing Banner
+      const banner = document.getElementById('trackRoutingBanner');
+      if (st.regime === 'large') {
+        banner.className = 'rounded-xl p-3 border bg-indigo-950/50 border-indigo-500/40';
+        banner.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono font-bold uppercase text-indigo-300">
+              LARGE DELEGATION (N ≥ 5) • EMPIRICAL RULE (±2.0σ Z-SCORE) ACTIVE
+            </span>
+            <span class="text-[11px] font-mono text-slate-300">Section 4–3 Track A</span>
+          </div>
+          <p class="text-[11px] text-slate-300 mt-1">
+            Tested via Model 1 (Binomial Proportional) and Model 2 (MCMC Spatial Ensemble). Any plan exceeding <strong>|Z| &gt; 2.00σ</strong> is per se unconstitutional.
+          </p>
+        `;
+      } else if (st.regime === 'small') {
+        banner.className = 'rounded-xl p-3 border bg-teal-950/60 border-teal-500/50';
+        banner.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono font-bold uppercase text-teal-300">
+              SMALL DELEGATION (N = 2–4) • EMPIRICAL RULE (±2σ) INAPPLICABLE
+            </span>
+            <span class="text-[11px] font-mono text-amber-300 font-semibold">95th %ile Active</span>
+          </div>
+          <p class="text-[11px] text-slate-200 mt-1">
+            <strong>DISCRETE SEAT COUNT &amp; 95th PERCENTILE MODEL ACTIVE:</strong> Because 1 seat shift = ${(100 / st.n).toFixed(1)}% of ${st.name}'s delegation, unconstitutionality is determined by whether the Efficiency Gap or Mean-Median exceeds the <strong>95.0th percentile</strong> of the neutral ensemble.
+          </p>
+        `;
+      } else {
+        banner.className = 'rounded-xl p-3 border bg-slate-900 border-slate-700';
+        banner.innerHTML = `
+          <div class="text-xs font-mono font-bold uppercase text-slate-300">
+            SINGLE-SEAT DELEGATION (N = 1) • AT-LARGE STATEWIDE DISTRICT (EXEMPT)
+          </div>
+        `;
+      }
+
+      // Before / After Cards
+      document.getElementById('auditPreSplit').textContent = `${st.preD}D – ${st.preR}R${st.preI ? ` – ${st.preI}I` : ''}${st.preVac ? ` (${st.preVac} Vac)` : ''}`;
+      document.getElementById('auditPreNote').textContent = st.regime === 'large'
+        ? `Pre Z_MCMC: ${formatZ(st.zMcmcPre)}`
+        : (st.regime === 'small' ? `Pre %ile: ${st.prePct.toFixed(1)}th` : 'At-Large');
+
+      document.getElementById('auditPostSplit').textContent = `${st.postD}D – ${st.postR}R${st.postI ? ` – ${st.postI}I` : ''}`;
+      const gainEl = document.getElementById('auditGainBadge');
+      if (st.netParty) {
+        gainEl.textContent = `+${st.netGainStr} (${st.bill || 'Redraw'})`;
+        gainEl.className = `text-[11px] font-mono font-semibold mt-0.5 ${st.netParty === 'D' ? 'text-blue-400' : 'text-red-400'}`;
+      } else {
+        gainEl.textContent = 'Unchanged in 2025–26';
+        gainEl.className = 'text-[11px] font-mono text-slate-400 mt-0.5';
+      }
+
+      document.getElementById('auditVoteShare').textContent = `${(st.pR * 100).toFixed(1)}% R / ${(st.pD * 100).toFixed(1)}% D`;
+      document.getElementById('auditPropMean').textContent = `MCMC μ: ${st.muMcmcR.toFixed(2)}R – ${(st.n - st.muMcmcR).toFixed(2)}D`;
+
+      // Toggle Track Containers
+      const trackA = document.getElementById('trackAContainer');
+      const trackB = document.getElementById('trackBContainer');
+      const trackC = document.getElementById('trackCContainer');
+
+      trackA.classList.add('hidden');
+      trackB.classList.add('hidden');
+      trackC.classList.add('hidden');
+
+      if (st.regime === 'large') {
+        trackA.classList.remove('hidden');
+        renderTrackADetails(st);
+      } else if (st.regime === 'small') {
+        trackB.classList.remove('hidden');
+        renderTrackBDetails(st);
+      } else {
+        trackC.classList.remove('hidden');
+      }
+
+      // Section 7 Readout
+      const sec7Desc = document.getElementById('sec7Desc');
+      const sec7Badge = document.getElementById('sec7Badge');
+      if (!st.isMidDecadeRedraw) {
+        sec7Desc.textContent = '1 map enacted this census cycle (Compliant).';
+        sec7Badge.textContent = 'PASS';
+        sec7Badge.className = 'px-2.5 py-1 rounded font-mono text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+      } else if (st.isCourtRemedy) {
+        sec7Desc.textContent = 'Court-ordered remedy (Prop 4) — Explicitly permitted by Sec. 7 exception.';
+        sec7Badge.textContent = 'EXEMPT (REMEDY)';
+        sec7Badge.className = 'px-2.5 py-1 rounded font-mono text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+      } else {
+        sec7Desc.textContent = 'Voluntary mid-decade redraw without judicial mandate — Void ab initio.';
+        sec7Badge.textContent = 'VIOLATED (VOID)';
+        sec7Badge.className = 'px-2.5 py-1 rounded font-mono text-[11px] font-bold bg-red-500/20 text-red-300 border border-red-500/40';
+      }
+
+      // Section 3 Remedy Footer
+      document.getElementById('remedyTargetSplit').textContent = `Target Median: ${st.remD}D – ${st.remR}R`;
+      document.getElementById('remedyExplanation').textContent = st.notes;
+    }
+
+    function renderTrackADetails(st) {
+      document.getElementById('model1Params').textContent = `μ_R = ${st.muBinR.toFixed(2)} seats · σ = ${st.sigmaBin.toFixed(2)} seats · ±2σ Cutoff: [${Math.max(0, st.muBinR - 2 * st.sigmaBin).toFixed(1)}, ${Math.min(st.n, st.muBinR + 2 * st.sigmaBin).toFixed(1)}]`;
+      const m1Pre = document.getElementById('model1ZPre');
+      const m1Post = document.getElementById('model1ZPost');
+      m1Pre.textContent = formatZ(st.zBinPre);
+      m1Pre.className = `font-bold ${Math.abs(st.zBinPre) > 2 ? 'text-red-400' : 'text-emerald-400'}`;
+      m1Post.textContent = formatZ(st.zBinPost);
+      m1Post.className = `font-bold ${Math.abs(st.zBinPost) > 2 ? 'text-red-400' : 'text-emerald-400'}`;
+
+      document.getElementById('model2Params').textContent = `μ_MCMC = ${st.muMcmcR.toFixed(2)} seats · σ_MCMC = ${st.sigmaMcmc.toFixed(2)} seats · ±2σ Cutoff: [${Math.max(0, st.muMcmcR - 2 * st.sigmaMcmc).toFixed(1)}, ${Math.min(st.n, st.muMcmcR + 2 * st.sigmaMcmc).toFixed(1)}]`;
+      const m2Pre = document.getElementById('model2ZPre');
+      const m2Post = document.getElementById('model2ZPost');
+      m2Pre.textContent = formatZ(st.zMcmcPre);
+      m2Pre.className = `font-bold ${Math.abs(st.zMcmcPre) > 2 ? 'text-red-400' : 'text-emerald-400'}`;
+      m2Post.textContent = formatZ(st.zMcmcPost);
+      m2Post.className = `font-bold ${Math.abs(st.zMcmcPost) > 2 ? 'text-red-400' : 'text-emerald-400'}`;
+
+      renderBellCurveSvg(st);
+    }
+
+    function renderBellCurveSvg(st) {
+      const svg = d3.select('#bellCurveSvg');
+      svg.selectAll('*').remove();
+
+      const zPre = bellCurveModel === 'mcmc' ? st.zMcmcPre : st.zBinPre;
+      const zPost = bellCurveModel === 'mcmc' ? st.zMcmcPost : st.zBinPost;
+      const mu = bellCurveModel === 'mcmc' ? st.muMcmcR : st.muBinR;
+      const sigma = bellCurveModel === 'mcmc' ? st.sigmaMcmc : st.sigmaBin;
+
+      const W = 500, H = 185, padL = 28, padR = 28, baseY = 140;
+      const xScale = d3.scaleLinear().domain([-5.8, 5.8]).range([padL, W - padR]);
+      const yScale = d3.scaleLinear().domain([0, 0.42]).range([baseY, 24]);
+
+      const pdf = z => Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
+
+      // Shaded Compliant Region (-2 to +2)
+      const compPts = d3.range(-2.0, 2.02, 0.05).map(z => [xScale(z), yScale(pdf(z))]);
+      const areaGen = d3.area().x(d => d[0]).y0(baseY).y1(d => d[1]);
+
+      svg.append('path')
+        .datum(compPts)
+        .attr('d', areaGen)
+        .attr('fill', 'rgba(16, 185, 129, 0.20)');
+
+      // Left & Right Tail Red Zones
+      const leftPts = d3.range(-5.8, -1.98, 0.05).map(z => [xScale(z), yScale(pdf(z))]);
+      const rightPts = d3.range(2.0, 5.82, 0.05).map(z => [xScale(z), yScale(pdf(z))]);
+      svg.append('path').datum(leftPts).attr('d', areaGen).attr('fill', 'rgba(239, 68, 68, 0.25)');
+      svg.append('path').datum(rightPts).attr('d', areaGen).attr('fill', 'rgba(239, 68, 68, 0.25)');
+
+      // Bell Curve Outline
+      const allPts = d3.range(-5.8, 5.82, 0.05).map(z => [xScale(z), yScale(pdf(z))]);
+      svg.append('path')
+        .datum(allPts)
+        .attr('d', d3.line())
+        .attr('fill', 'none')
+        .attr('stroke', '#818cf8')
+        .attr('stroke-width', 2.2);
+
+      // Baseline & ±2σ Vertical Firewall Lines
+      svg.append('line').attr('x1', padL).attr('x2', W - padR).attr('y1', baseY).attr('y2', baseY).attr('stroke', '#475569').attr('stroke-width', 1.2);
+
+      [-2, 0, 2].forEach(zVal => {
+        svg.append('line')
+          .attr('x1', xScale(zVal)).attr('x2', xScale(zVal))
+          .attr('y1', 20).attr('y2', baseY)
+          .attr('stroke', zVal === 0 ? '#94a3b8' : '#f87171')
+          .attr('stroke-dasharray', '4,3')
+          .attr('stroke-width', zVal === 0 ? 1.2 : 1.6);
+      });
+
+      // Tick Labels
+      [-4, -2, 0, 2, 4].forEach(zVal => {
+        const seatVal = (mu + zVal * sigma).toFixed(1);
+        svg.append('text')
+          .attr('x', xScale(zVal)).attr('y', baseY + 15)
+          .attr('text-anchor', 'middle')
+          .attr('class', 'font-mono text-[10px] fill-slate-300')
+          .text(zVal === 0 ? 'μ (0σ)' : `${zVal > 0 ? '+' : ''}${zVal}σ`);
+
+        svg.append('text')
+          .attr('x', xScale(zVal)).attr('y', baseY + 28)
+          .attr('text-anchor', 'middle')
+          .attr('class', 'font-mono text-[9px] fill-slate-500')
+          .text(`${seatVal}R`);
+      });
+
+      // Plot Pre-2026 Pin (Amber)
+      const clampPre = Math.max(-5.5, Math.min(5.5, zPre));
+      const xPre = xScale(clampPre);
+      svg.append('line').attr('x1', xPre).attr('x2', xPre).attr('y1', 42).attr('y2', baseY).attr('stroke', '#fbbf24').attr('stroke-width', 2);
+      svg.append('circle').attr('cx', xPre).attr('cy', 42).attr('r', 5).attr('fill', '#fbbf24');
+      svg.append('text').attr('x', xPre).attr('y', 32).attr('text-anchor', 'middle').attr('class', 'font-mono text-[10px] font-bold fill-amber-300').text(`Pre: ${formatZ(zPre)}`);
+
+      // Plot Post-2026 Pin (Fuchsia)
+      const clampPost = Math.max(-5.5, Math.min(5.5, zPost));
+      const xPost = xScale(clampPost);
+      const yOffset = Math.abs(xPost - xPre) < 42 ? 16 : 32;
+      svg.append('line').attr('x1', xPost).attr('x2', xPost).attr('y1', yOffset + 10).attr('y2', baseY).attr('stroke', '#e879f9').attr('stroke-width', 2.4);
+      svg.append('circle').attr('cx', xPost).attr('cy', yOffset + 10).attr('r', 5.5).attr('fill', '#e879f9');
+      svg.append('text').attr('x', xPost).attr('y', yOffset).attr('text-anchor', 'middle').attr('class', 'font-mono text-[10px] font-bold fill-fuchsia-300').text(`2026: ${formatZ(zPost)}`);
+    }
+
+    function renderTrackBDetails(st) {
+      document.getElementById('discreteStepsLabel').textContent = `${st.n + 1} Discrete Outcomes (0R..${st.n}R)`;
+      document.getElementById('discreteReasonN').textContent = `N = ${st.n}`;
+      document.getElementById('discreteStepPct').textContent = `${(100 / st.n).toFixed(1)}%`;
+
+      // Render Discrete Seat Probability Histogram
+      const hist = document.getElementById('discreteSeatHistogram');
+      const probs = st.discreteProbs || [];
+      hist.style.gridTemplateColumns = `repeat(${st.n + 1}, minmax(0, 1fr))`;
+
+      hist.innerHTML = probs.map((prob, rSeats) => {
+        const dSeats = st.n - rSeats;
+        const pct = (prob * 100).toFixed(1);
+        const barH = Math.max(6, Math.round(prob * 90));
+        const isPre = st.preR === rSeats;
+        const isPost = st.postR === rSeats;
+
+        let borderCls = 'border-slate-800 bg-slate-900/80';
+        if (isPre && isPost) borderCls = 'border-fuchsia-400 bg-fuchsia-950/30 ring-1 ring-fuchsia-400/50';
+        else if (isPost) borderCls = 'border-emerald-400 bg-emerald-950/30 ring-1 ring-emerald-400/50';
+        else if (isPre) borderCls = 'border-amber-400 bg-amber-950/30';
+
+        return `
+          <div class="rounded-lg p-2 border flex flex-col items-center justify-end text-center ${borderCls}">
+            <div class="text-[10px] font-mono font-bold text-teal-300 mb-1">${pct}%</div>
+            <div class="w-full h-24 bg-slate-950 rounded flex items-end justify-center p-1 border border-slate-800/70">
+              <div class="w-full rounded bg-gradient-to-t from-teal-600 to-teal-400 transition-all duration-300" style="height: ${barH}px"></div>
+            </div>
+            <div class="font-mono font-bold text-xs text-white mt-1.5">${dSeats}D–${rSeats}R</div>
+            <div class="flex flex-wrap gap-1 justify-center mt-1 min-h-[16px]">
+              ${isPre ? `<span class="px-1 rounded text-[9px] font-mono font-bold bg-amber-400 text-slate-950">Pre</span>` : ''}
+              ${isPost ? `<span class="px-1 rounded text-[9px] font-mono font-bold bg-fuchsia-400 text-slate-950">2026</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Continuous Metrics & 95th Percentile Gauge
+      document.getElementById('smallEgReadout').textContent = st.egPostVal;
+      document.getElementById('smallEgPreSub').textContent = st.code === 'UT' ? `Pre-2026 EG: ${st.egPreVal}` : `119th Baseline EG: ${st.egPreVal}`;
+
+      document.getElementById('smallMmReadout').textContent = st.mmPostVal;
+      document.getElementById('smallMmPreSub').textContent = st.code === 'UT' ? `Pre-2026 MM: ${st.mmPreVal}` : `119th Baseline MM: ${st.mmPreVal}`;
+
+      const pctBadge = document.getElementById('smallPctRankBadge');
+      const fails95 = st.postPct > 95.0;
+      if (st.code === 'UT') {
+        pctBadge.textContent = `99.6th %ile (FAIL) → 52.0th %ile (PASS)`;
+        pctBadge.className = 'font-mono text-xs font-bold text-emerald-400';
+      } else {
+        pctBadge.textContent = `${st.postPct.toFixed(1)}th Percentile (${fails95 ? 'FAIL >95.0th' : 'PASS ≤95.0th'})`;
+        pctBadge.className = `font-mono text-xs font-bold ${fails95 ? 'text-red-400' : 'text-emerald-400'}`;
+      }
+
+      document.getElementById('smallPrePctMarker').style.left = `${Math.min(99.5, st.prePct)}%`;
+      const postBar = document.getElementById('smallPostPctBar');
+      postBar.style.width = `${Math.min(100, st.postPct)}%`;
+      postBar.className = `h-full transition-all duration-300 ${fails95 ? 'bg-gradient-to-r from-amber-500 to-red-500' : 'bg-gradient-to-r from-teal-500 to-emerald-400'}`;
+    }
+
+    // ============================================================================
+    // 7. COMPLETE 50-STATE MASTER COMPARISON TABLE
+    // ============================================================================
+    function renderAuditTable() {
+      const tbody = document.getElementById('auditTableBody');
+      const query = (document.getElementById('stateSearchInput').value || '').trim().toLowerCase();
+      const audited = getAllAuditedStates();
+
+      const filtered = audited.filter(st => {
+        if (query) {
+          const match = st.name.toLowerCase().includes(query) ||
+                        st.code.toLowerCase().includes(query) ||
+                        (st.bill && st.bill.toLowerCase().includes(query));
+          if (!match) return false;
+        }
+        if (currentTableFilter === 'changed') return st.netParty !== null;
+        if (currentTableFilter === 'large') return st.regime === 'large';
+        if (currentTableFilter === 'small') return st.regime === 'small';
+        if (currentTableFilter === 'unconstitutional') return !st.postPass || !st.prePass;
+        return true;
+      });
+
+      tbody.innerHTML = filtered.map(st => {
+        const isSel = st.code === selectedStateCode;
+        const rowCls = isSel ? 'bg-blue-950/40' : 'hover:bg-slate-800/50';
+
+        // Test Regime Pill
+        let regimePill = '';
+        if (st.regime === 'large') {
+          regimePill = `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">Large (N≥5) • ±2.0σ</span>`;
+        } else if (st.regime === 'small') {
+          regimePill = `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-teal-500/15 text-teal-300 border border-teal-500/30">Small (N=2–4) • 95th %ile</span>`;
+        } else {
+          regimePill = `<span class="px-2 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-800">Single (N=1) • Exempt</span>`;
+        }
+
+        // Net Gain Pill
+        let gainHtml = '<span class="text-slate-600">—</span>';
+        if (st.netParty === 'D') {
+          gainHtml = `<span class="px-2 py-0.5 rounded font-mono font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">+${st.netGainStr}</span>`;
+        } else if (st.netParty === 'R') {
+          gainHtml = `<span class="px-2 py-0.5 rounded font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/40">+${st.netGainStr}</span>`;
+        }
+
+        // Primary & Secondary Statistical Columns
+        let primaryCol = '';
+        let secondaryCol = '';
+
+        if (st.regime === 'large') {
+          const zPreCls = Math.abs(st.zMcmcPre) > 2 ? 'text-red-400 font-bold' : 'text-slate-300';
+          const zPostCls = Math.abs(st.zMcmcPost) > 2 ? 'text-red-400 font-bold' : 'text-emerald-400 font-bold';
+          primaryCol = `<span class="font-mono"><span class="${zPreCls}">${formatZ(st.zMcmcPre)}</span> → <span class="${zPostCls}">${formatZ(st.zMcmcPost)}</span> <span class="text-[10px] text-slate-500">(MCMC)</span></span>`;
+          secondaryCol = `<span class="font-mono text-[11px] text-slate-400">Binom Z: ${formatZ(st.zBinPost)}</span>`;
+        } else if (st.regime === 'small') {
+          primaryCol = `<span class="font-mono text-[11px] text-amber-300 font-semibold">±2σ N/A (Discrete)</span> <span class="font-mono text-[11px] text-slate-300">· EG: ${st.egPostVal}, MM: ${st.mmPostVal}</span>`;
+          const pctCls = st.postPct > 95 ? 'text-red-400 font-bold' : 'text-teal-300 font-bold';
+          secondaryCol = st.code === 'UT'
+            ? `<span class="font-mono text-[11px] text-emerald-400 font-bold">99.6th → 52.0th %ile</span>`
+            : `<span class="font-mono text-[11px] ${pctCls}">${st.postPct.toFixed(1)}th %ile (vs 95th)</span>`;
+        } else {
+          primaryCol = `<span class="font-mono text-slate-500">At-Large Statewide</span>`;
+          secondaryCol = `<span class="font-mono text-slate-500">—</span>`;
+        }
+
+        // Verdict Pill
+        let verdictHtml = '';
+        if (st.regime === 'single') {
+          verdictHtml = `<span class="font-mono text-slate-400">Exempt (N=1)</span>`;
+        } else if (st.code === 'UT') {
+          verdictHtml = `<span class="px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">PASS (Prop 4 Remedy)</span>`;
+        } else if (!st.postPass) {
+          const reason = st.regime === 'large'
+            ? (st.sec7Pass ? 'Fails ±2.0σ' : 'Fails ±2.0σ & Sec. 7')
+            : 'Fails >95.0th %ile';
+          verdictHtml = `<span class="px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-red-500/20 text-red-300 border border-red-500/40">FAIL (${reason})</span>`;
+        } else {
+          verdictHtml = `<span class="px-2 py-0.5 rounded font-mono text-[11px] font-semibold bg-emerald-500/15 text-emerald-300">PASS (${st.regime==='large'?'≤2.0σ':'≤95th %ile'})</span>`;
+        }
+
+        return `
+          <tr onclick="selectState('${st.code}')" class="cursor-pointer transition ${rowCls}">
+            <td class="py-2.5 px-3 font-semibold text-white whitespace-nowrap">${st.name} <span class="font-mono text-xs text-slate-400">(${st.code})</span></td>
+            <td class="py-2.5 px-2 text-center font-mono text-slate-200">${st.n}</td>
+            <td class="py-2.5 px-2.5 whitespace-nowrap">${regimePill}</td>
+            <td class="py-2.5 px-3 font-mono text-slate-300 whitespace-nowrap">${st.preD}D – ${st.preR}R${st.preI?` – ${st.preI}I`:''}${st.preVac?` – ${st.preVac}Vac`:''}</td>
+            <td class="py-2.5 px-3 font-mono text-white font-semibold whitespace-nowrap">${st.postD}D – ${st.postR}R${st.postI?` – ${st.postI}I`:''}</td>
+            <td class="py-2.5 px-2.5 text-center whitespace-nowrap">${gainHtml}</td>
+            <td class="py-2.5 px-2.5 font-mono text-xs text-amber-300 whitespace-nowrap">${st.bill || '—'}</td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap">${primaryCol}</td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap">${secondaryCol}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${verdictHtml}</td>
+            <td class="py-2.5 px-3 font-mono text-emerald-400 whitespace-nowrap">${st.remD}D–${st.remR}R</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // ============================================================================
+    // 8. INTERACTIVE EVENT HANDLERS
+    // ============================================================================
+    function selectState(code) {
+      selectedStateCode = code;
+      renderQuickPills();
+      renderSmallStatesMatrix();
+      if (currentMapGeometry === 'geo') renderGeographicMap();
+      else renderCartogramGrid();
+      renderSelectedStateAudit();
+      renderAuditTable();
+    }
+
+    function setMapGeometry(geoType) {
+      currentMapGeometry = geoType;
+      document.getElementById('geoMapContainer').classList.toggle('hidden', geoType !== 'geo');
+      document.getElementById('cartoMapContainer').classList.toggle('hidden', geoType !== 'carto');
+
+      document.getElementById('btnViewGeo').className = geoType === 'geo'
+        ? 'px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow'
+        : 'px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400 hover:text-white';
+      document.getElementById('btnViewCarto').className = geoType === 'carto'
+        ? 'px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-blue-600 text-white shadow'
+        : 'px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400 hover:text-white';
+
+      if (geoType === 'geo') renderGeographicMap();
+      else renderCartogramGrid();
+    }
+
+    function setMapMode(mode) {
+      currentMapMode = mode;
+      ['gains', 'verdict2026', 'regime', 'verdictPre'].forEach(m => {
+        const btn = document.getElementById(`mode_${m}`);
+        if (btn) {
+          btn.className = m === mode
+            ? 'mode-btn px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white border border-blue-400/40 shadow-sm'
+            : 'mode-btn px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/90 text-slate-300 hover:bg-slate-800 border border-slate-700';
+        }
+      });
+
+      renderMapLegend();
+      if (currentMapGeometry === 'geo') renderGeographicMap();
+      else renderCartogramGrid();
+    }
+
+    function setTableFilter(filter) {
+      currentTableFilter = filter;
+      ['all', 'changed', 'large', 'small', 'unconstitutional'].forEach(f => {
+        const btn = document.getElementById(`tab_${f}`);
+        if (btn) {
+          btn.className = f === filter
+            ? 'tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 text-white shadow'
+            : 'tab-btn px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300 hover:text-white border border-slate-700';
+        }
+      });
+      renderAuditTable();
+    }
+
+    function setBellCurveModel(model) {
+      bellCurveModel = model;
+      document.getElementById('bellBtnMcmc').className = model === 'mcmc'
+        ? 'px-2 py-0.5 rounded bg-indigo-600 text-white font-semibold'
+        : 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white';
+      document.getElementById('bellBtnBinom').className = model === 'binom'
+        ? 'px-2 py-0.5 rounded bg-indigo-600 text-white font-semibold'
+        : 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white';
+      renderSelectedStateAudit();
+    }
+
+    function updateSigmaMultiplier(val) {
+      sigmaMultiplier = parseFloat(val);
+      document.getElementById('sigmaScaleLabel').textContent = `${sigmaMultiplier.toFixed(2)}x ${sigmaMultiplier === 1 ? '(Empirical Default)' : ''}`;
+      renderQuickPills();
+      if (currentMapGeometry === 'geo') renderGeographicMap();
+      else renderCartogramGrid();
+      renderSelectedStateAudit();
+      renderAuditTable();
+    }
+
+    // Initialize Application on Load
+    window.onload = function () {
+      renderMapLegend();
+      renderQuickPills();
+      renderSmallStatesMatrix();
+      renderSelectedStateAudit();
+      renderAuditTable();
+      initGeographicMap();
+      renderCartogramGrid();
+    };
+  </script>
+</body>
+</html>
